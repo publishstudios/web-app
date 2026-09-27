@@ -12,7 +12,6 @@ export default function Home() {
   const [activePageIdx, setActivePageIdx] = useState(0);
   const fileInputRef = useRef(null);
 
-  // Universal POD gutter calculation rules
   const calculateGutter = (total) => {
     if (total <= 150) return 0.375;
     if (total <= 300) return 0.500;
@@ -25,7 +24,7 @@ export default function Home() {
   const outsideMargin = 0.375;
   const topBottomMargin = 0.5;
 
-  // Split parsed text into book page chunks (~260 words per 6x9 trade page)
+  // Strict page splitting logic honoring headers, section boundaries, and capacity
   const paginateHtml = (htmlContent) => {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlContent;
@@ -33,24 +32,40 @@ export default function Home() {
 
     const generatedPages = [];
     let currentPageHtml = '';
-    let wordBudget = 0;
-    const maxWordsPerPage = trimSize === '6x9' ? 280 : trimSize === '5.5x8.5' ? 240 : 380;
+    let currentWords = 0;
+    const wordLimitPerPage = trimSize === '6x9' ? 220 : trimSize === '5.5x8.5' ? 190 : 310;
+
+    const pushPage = () => {
+      if (currentPageHtml.trim()) {
+        generatedPages.push(currentPageHtml);
+        currentPageHtml = '';
+        currentWords = 0;
+      }
+    };
 
     elements.forEach((el) => {
-      const wordsInEl = el.innerText ? el.innerText.trim().split(/\s+/).length : 0;
-      if (wordBudget + wordsInEl > maxWordsPerPage && currentPageHtml !== '') {
-        generatedPages.push(currentPageHtml);
-        currentPageHtml = el.outerHTML;
-        wordBudget = wordsInEl;
-      } else {
-        currentPageHtml += el.outerHTML;
-        wordBudget += wordsInEl;
+      const tag = el.tagName.toLowerCase();
+      const text = el.innerText ? el.innerText.trim() : '';
+      const isHeader = ['h1', 'h2', 'h3'].includes(tag);
+      const isSectionMarker = /^(chapter|contents|table of contents|dedication|acknowledgments|copyright|introduction)/i.test(text);
+
+      // Force a hard page break before major sections or headings
+      if ((isHeader || isSectionMarker) && currentPageHtml.trim() !== '') {
+        pushPage();
       }
+
+      const wordsInEl = text ? text.split(/\s+/).length : 0;
+
+      // Overflow control for regular long paragraphs
+      if (currentWords + wordsInEl > wordLimitPerPage && currentPageHtml.trim() !== '') {
+        pushPage();
+      }
+
+      currentPageHtml += el.outerHTML;
+      currentWords += wordsInEl;
     });
 
-    if (currentPageHtml) {
-      generatedPages.push(currentPageHtml);
-    }
+    pushPage();
 
     setPages(generatedPages.length > 0 ? generatedPages : [htmlContent]);
     setActivePageIdx(0);
@@ -74,15 +89,15 @@ export default function Home() {
     }
   };
 
-  // Dimensions mapped to inches (rendered via CSS aspect ratios)
+  // Fixed dimensional frames preserving standard book aspect ratios
   const trimDimensions = {
-    '6x9': { width: '360px', minHeight: '540px' },
-    '5.5x8.5': { width: '330px', minHeight: '510px' },
-    '8.5x11': { width: '420px', minHeight: '544px' },
-    '5x8': { width: '300px', minHeight: '480px' },
+    '6x9': { width: '360px', height: '540px' },
+    '5.5x8.5': { width: '330px', height: '510px' },
+    '8.5x11': { width: '420px', height: '544px' },
+    '5x8': { width: '300px', height: '480px' },
   };
 
-  const isRightPage = activePageIdx % 2 === 1; // Alternating Recto / Verso
+  const isRightPage = activePageIdx % 2 === 1;
   const currentLeftPad = isRightPage ? gutter * 96 : outsideMargin * 96;
   const currentRightPad = isRightPage ? outsideMargin * 96 : gutter * 96;
 
@@ -100,7 +115,7 @@ export default function Home() {
           </div>
         </div>
         <span className="text-[11px] font-medium px-3 py-1 bg-slate-900 border border-slate-800 rounded-full text-slate-400">
-          v1.1.0 Paginated
+          v1.2.0 Strict Breaks
         </span>
       </header>
 
@@ -198,10 +213,9 @@ export default function Home() {
         </button>
       </section>
 
-      {/* Paginated Book Sheet Viewer */}
+      {/* Fixed-Height Book Sheet Viewer */}
       {pages.length > 0 && (
         <section className="w-full flex flex-col items-center mb-16">
-          {/* Page Flip Bar */}
           <div className="flex items-center gap-4 mb-4 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl">
             <button
               onClick={() => setActivePageIdx((p) => Math.max(p - 1, 0))}
@@ -222,12 +236,11 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Physical Book Page Simulation */}
           <div
-            className="bg-[#faf8f5] text-slate-900 shadow-2xl rounded-sm border border-stone-300 flex flex-col justify-between transition-all duration-200"
+            className="bg-[#faf8f5] text-slate-900 shadow-2xl rounded-sm border border-stone-300 flex flex-col justify-between overflow-hidden"
             style={{
               width: trimDimensions[trimSize].width,
-              minHeight: trimDimensions[trimSize].minHeight,
+              height: trimDimensions[trimSize].height,
               paddingLeft: `${currentLeftPad}px`,
               paddingRight: `${currentRightPad}px`,
               paddingTop: `${topBottomMargin * 96}px`,
@@ -235,19 +248,19 @@ export default function Home() {
             }}
           >
             {/* Running Header */}
-            <div className="w-full text-[9px] uppercase tracking-widest text-stone-500 border-b border-stone-200 pb-1 mb-4 flex justify-between font-serif">
+            <div className="w-full text-[9px] uppercase tracking-widest text-stone-500 border-b border-stone-200 pb-1 mb-3 flex justify-between font-serif select-none">
               <span>{isRightPage ? fileName.replace('.docx', '') : 'PUBLISHSTUDIO'}</span>
               <span>{activePageIdx + 1}</span>
             </div>
 
             {/* Book Body Copy */}
             <div
-              className="book-page-body font-serif text-[12px] leading-relaxed text-stone-900 flex-1 space-y-2 [&>p]:indent-4 [&>p:first-of-type]:indent-0"
+              className="book-page-body font-serif text-[11px] leading-relaxed text-stone-900 flex-1 overflow-hidden space-y-2 [&>p]:indent-4 [&>p:first-of-type]:indent-0 [&>h1]:text-base [&>h1]:font-bold [&>h1]:mb-3 [&>h2]:text-sm [&>h2]:font-bold [&>h2]:mb-2"
               dangerouslySetInnerHTML={{ __html: pages[activePageIdx] }}
             />
 
-            {/* Page Number (Running Footer) */}
-            <div className="w-full text-center text-[10px] font-serif text-stone-600 pt-3 border-t border-stone-200 mt-4">
+            {/* Running Footer */}
+            <div className="w-full text-center text-[10px] font-serif text-stone-600 pt-2 border-t border-stone-200 mt-2 select-none">
               {activePageIdx + 1}
             </div>
           </div>
@@ -260,4 +273,4 @@ export default function Home() {
       </footer>
     </main>
   );
-              }
+            }

@@ -1,17 +1,18 @@
 'use client';
 import React, { useState, useRef } from 'react';
-import { Upload, BookOpen, Layers, ArrowRight, FileText, CheckCircle, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
-import mammoth from 'mammoth';
+import { Upload, BookOpen, Layers, ArrowRight, Printer, RefreshCw, FileCheck } from 'lucide-react';
 
 export default function Home() {
   const [pageCount, setPageCount] = useState(120);
   const [trimSize, setTrimSize] = useState('6x9');
-  const [pages, setPages] = useState([]);
   const [fileName, setFileName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activePageIdx, setActivePageIdx] = useState(0);
+  const [hasRendered, setHasRendered] = useState(false);
+  
   const fileInputRef = useRef(null);
+  const docxViewerRef = useRef(null);
 
+  // Industry POD gutter rules
   const calculateGutter = (total) => {
     if (total <= 150) return 0.375;
     if (total <= 300) return 0.500;
@@ -24,87 +25,52 @@ export default function Home() {
   const outsideMargin = 0.375;
   const topBottomMargin = 0.5;
 
-  // Strict page splitting logic honoring headers, section boundaries, and capacity
-  const paginateHtml = (htmlContent) => {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlContent;
-    const elements = Array.from(tempDiv.children);
-
-    const generatedPages = [];
-    let currentPageHtml = '';
-    let currentWords = 0;
-    const wordLimitPerPage = trimSize === '6x9' ? 220 : trimSize === '5.5x8.5' ? 190 : 310;
-
-    const pushPage = () => {
-      if (currentPageHtml.trim()) {
-        generatedPages.push(currentPageHtml);
-        currentPageHtml = '';
-        currentWords = 0;
-      }
-    };
-
-    elements.forEach((el) => {
-      const tag = el.tagName.toLowerCase();
-      const text = el.innerText ? el.innerText.trim() : '';
-      const isHeader = ['h1', 'h2', 'h3'].includes(tag);
-      const isSectionMarker = /^(chapter|contents|table of contents|dedication|acknowledgments|copyright|introduction)/i.test(text);
-
-      // Force a hard page break before major sections or headings
-      if ((isHeader || isSectionMarker) && currentPageHtml.trim() !== '') {
-        pushPage();
-      }
-
-      const wordsInEl = text ? text.split(/\s+/).length : 0;
-
-      // Overflow control for regular long paragraphs
-      if (currentWords + wordsInEl > wordLimitPerPage && currentPageHtml.trim() !== '') {
-        pushPage();
-      }
-
-      currentPageHtml += el.outerHTML;
-      currentWords += wordsInEl;
-    });
-
-    pushPage();
-
-    setPages(generatedPages.length > 0 ? generatedPages : [htmlContent]);
-    setActivePageIdx(0);
-  };
-
   const handleFileUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setFileName(file.name);
     setIsProcessing(true);
+    setHasRendered(false);
 
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const result = await mammoth.convertToHtml({ arrayBuffer });
-      paginateHtml(result.value);
+      // Dynamic import to ensure 100% client-side DOM execution in Next.js
+      const docx = await import('docx-preview');
+
+      if (docxViewerRef.current) {
+        docxViewerRef.current.innerHTML = '';
+        
+        await docx.renderAsync(file, docxViewerRef.current, null, {
+          className: 'docx-page-sheet',
+          inWrapper: true,
+          ignoreWidth: false,
+          ignoreHeight: false,
+          breakPages: true,
+          renderHeaders: true,
+          renderFooters: true,
+          renderFootnotes: true,
+          renderEndnotes: true,
+          experimental: true,
+        });
+
+        setHasRendered(true);
+      }
     } catch (err) {
-      alert('Error parsing DOCX file. Please verify it is a valid .docx document.');
+      console.error(err);
+      alert('Error parsing Word document. Please ensure it is a valid .docx file.');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Fixed dimensional frames preserving standard book aspect ratios
-  const trimDimensions = {
-    '6x9': { width: '360px', height: '540px' },
-    '5.5x8.5': { width: '330px', height: '510px' },
-    '8.5x11': { width: '420px', height: '544px' },
-    '5x8': { width: '300px', height: '480px' },
+  const handlePrint = () => {
+    window.print();
   };
 
-  const isRightPage = activePageIdx % 2 === 1;
-  const currentLeftPad = isRightPage ? gutter * 96 : outsideMargin * 96;
-  const currentRightPad = isRightPage ? outsideMargin * 96 : gutter * 96;
-
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center px-4 py-10 selection:bg-indigo-500 selection:text-white">
+    <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center px-4 py-8 selection:bg-indigo-500 selection:text-white">
       {/* Header */}
-      <header className="w-full max-w-4xl flex items-center justify-between border-b border-slate-800 pb-5 mb-10">
+      <header className="w-full max-w-5xl flex items-center justify-between border-b border-slate-800 pb-5 mb-8">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/20">
             <BookOpen className="w-5 h-5 text-white" />
@@ -114,26 +80,37 @@ export default function Home() {
             <span className="text-[10px] text-indigo-400 font-mono tracking-widest uppercase">Print OS Engine</span>
           </div>
         </div>
-        <span className="text-[11px] font-medium px-3 py-1 bg-slate-900 border border-slate-800 rounded-full text-slate-400">
-          v1.2.0 Strict Breaks
-        </span>
+        <div className="flex items-center gap-2">
+          {hasRendered && (
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs px-3.5 py-1.5 rounded-lg transition"
+            >
+              <Printer className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Print / Export PDF</span>
+            </button>
+          )}
+          <span className="text-[11px] font-medium px-3 py-1 bg-slate-900 border border-slate-800 rounded-full text-emerald-400">
+            v2.0 Native Engine
+          </span>
+        </div>
       </header>
 
       {/* Hero Section */}
       <section className="w-full max-w-3xl text-center mb-8">
         <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight mb-3 text-white">
-          Automated Book Layout & Typesetting
+          Real Word Document Engine
         </h1>
         <p className="text-slate-400 text-xs md:text-sm max-w-lg mx-auto">
-          Universal trade trim templates, dynamic gutter calculation, and real multi-page print layout preview.
+          Client-side DOCX rendering with authentic page breaks, margins, headers, and trade-accurate typesetting.
         </p>
       </section>
 
       {/* Margin & Gutter Inspector */}
-      <section className="w-full max-w-2xl bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl mb-8">
+      <section className="w-full max-w-3xl bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl mb-8">
         <div className="flex items-center gap-2 mb-5">
           <Layers className="w-4 h-4 text-indigo-400" />
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider">Trim & Margin Control</h2>
+          <h2 className="text-sm font-bold text-white uppercase tracking-wider">POD Trim & Binding Specs</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
@@ -155,7 +132,7 @@ export default function Home() {
 
           <div>
             <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">
-              Estimated Total Pages ({pageCount})
+              Target Page Count ({pageCount})
             </label>
             <input
               type="range"
@@ -170,11 +147,11 @@ export default function Home() {
 
         <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 grid grid-cols-3 gap-2 text-center font-mono">
           <div>
-            <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Inside Gutter</span>
+            <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Required Gutter</span>
             <span className="text-sm font-bold text-indigo-400">{gutter}"</span>
           </div>
           <div>
-            <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Outside Margin</span>
+            <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Outer Margin</span>
             <span className="text-sm font-bold text-slate-200">{outsideMargin}"</span>
           </div>
           <div>
@@ -184,8 +161,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Upload Button */}
-      <section className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center shadow-xl mb-8">
+      {/* Upload Box */}
+      <section className="w-full max-w-3xl bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center shadow-xl mb-8">
         <input
           ref={fileInputRef}
           type="file"
@@ -202,75 +179,36 @@ export default function Home() {
           {isProcessing ? (
             <>
               <RefreshCw className="w-4 h-4 animate-spin" />
-              <span>Formatting Pages...</span>
+              <span>Rendering Real Word Document...</span>
             </>
           ) : (
             <>
               <Upload className="w-4 h-4" />
-              <span>{fileName ? `Uploaded: ${fileName}` : 'Upload DOCX Manuscript'}</span>
+              <span>{fileName ? `Loaded: ${fileName}` : 'Upload DOCX Document'}</span>
             </>
           )}
         </button>
+
+        {fileName && (
+          <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-indigo-400 font-mono">
+            <FileCheck className="w-3.5 h-3.5" />
+            <span>Ready for view: {fileName}</span>
+          </div>
+        )}
       </section>
 
-      {/* Fixed-Height Book Sheet Viewer */}
-      {pages.length > 0 && (
-        <section className="w-full flex flex-col items-center mb-16">
-          <div className="flex items-center gap-4 mb-4 bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl">
-            <button
-              onClick={() => setActivePageIdx((p) => Math.max(p - 1, 0))}
-              disabled={activePageIdx === 0}
-              className="p-1 rounded hover:bg-slate-800 disabled:opacity-30"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <span className="text-xs font-mono text-slate-300">
-              Page {activePageIdx + 1} of {pages.length} ({isRightPage ? 'Recto / Right' : 'Verso / Left'})
-            </span>
-            <button
-              onClick={() => setActivePageIdx((p) => Math.min(p + 1, pages.length - 1))}
-              disabled={activePageIdx === pages.length - 1}
-              className="p-1 rounded hover:bg-slate-800 disabled:opacity-30"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div
-            className="bg-[#faf8f5] text-slate-900 shadow-2xl rounded-sm border border-stone-300 flex flex-col justify-between overflow-hidden"
-            style={{
-              width: trimDimensions[trimSize].width,
-              height: trimDimensions[trimSize].height,
-              paddingLeft: `${currentLeftPad}px`,
-              paddingRight: `${currentRightPad}px`,
-              paddingTop: `${topBottomMargin * 96}px`,
-              paddingBottom: `${topBottomMargin * 96}px`,
-            }}
-          >
-            {/* Running Header */}
-            <div className="w-full text-[9px] uppercase tracking-widest text-stone-500 border-b border-stone-200 pb-1 mb-3 flex justify-between font-serif select-none">
-              <span>{isRightPage ? fileName.replace('.docx', '') : 'PUBLISHSTUDIO'}</span>
-              <span>{activePageIdx + 1}</span>
-            </div>
-
-            {/* Book Body Copy */}
-            <div
-              className="book-page-body font-serif text-[11px] leading-relaxed text-stone-900 flex-1 overflow-hidden space-y-2 [&>p]:indent-4 [&>p:first-of-type]:indent-0 [&>h1]:text-base [&>h1]:font-bold [&>h1]:mb-3 [&>h2]:text-sm [&>h2]:font-bold [&>h2]:mb-2"
-              dangerouslySetInnerHTML={{ __html: pages[activePageIdx] }}
-            />
-
-            {/* Running Footer */}
-            <div className="w-full text-center text-[10px] font-serif text-stone-600 pt-2 border-t border-stone-200 mt-2 select-none">
-              {activePageIdx + 1}
-            </div>
-          </div>
-        </section>
-      )}
+      {/* Real Word Document Paginated Canvas Container */}
+      <section className="w-full max-w-4xl flex flex-col items-center">
+        <div
+          ref={docxViewerRef}
+          className="w-full flex flex-col items-center gap-8 py-4 [&_.docx-page-sheet]:shadow-2xl [&_.docx-page-sheet]:rounded-sm [&_.docx-page-sheet]:border [&_.docx-page-sheet]:border-stone-300 [&_.docx-page-sheet]:bg-white [&_.docx-page-sheet]:text-black"
+        />
+      </section>
 
       {/* Footer */}
-      <footer className="w-full max-w-4xl border-t border-slate-900 mt-auto pt-6 text-center text-[11px] text-slate-600">
-        &copy; {new Date().getFullYear()} PublishStudio. Standard Trade POD Compliant Architecture.
+      <footer className="w-full max-w-5xl border-t border-slate-900 mt-auto pt-6 text-center text-[11px] text-slate-600">
+        &copy; {new Date().getFullYear()} PublishStudio. Client-Side DOCX Rendering Engine.
       </footer>
     </main>
   );
-            }
+}

@@ -1,18 +1,22 @@
 'use client';
 import React, { useState, useRef } from 'react';
-import { Upload, BookOpen, Layers, ArrowRight, Printer, RefreshCw, FileCheck } from 'lucide-react';
+import { Upload, BookOpen, Layers, ArrowRight, Printer, RefreshCw, FileCheck, Download } from 'lucide-react';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
+import { saveAs } from 'file-saver';
 
 export default function Home() {
   const [pageCount, setPageCount] = useState(120);
   const [trimSize, setTrimSize] = useState('6x9');
   const [fileName, setFileName] = useState('');
+  const [rawTextLines, setRawTextLines] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [hasRendered, setHasRendered] = useState(false);
   
   const fileInputRef = useRef(null);
   const docxViewerRef = useRef(null);
 
-  // Industry POD gutter rules
+  // Universal POD gutter rules
   const calculateGutter = (total) => {
     if (total <= 150) return 0.375;
     if (total <= 300) return 0.500;
@@ -34,7 +38,7 @@ export default function Home() {
     setHasRendered(false);
 
     try {
-      // Dynamic import to ensure 100% client-side DOM execution in Next.js
+      // Dynamic import docx-preview for 100% client-side execution
       const docx = await import('docx-preview');
 
       if (docxViewerRef.current) {
@@ -53,6 +57,11 @@ export default function Home() {
           experimental: true,
         });
 
+        // Extract raw text lines for building the formatted Word export
+        const extractedText = docxViewerRef.current.innerText || '';
+        const lines = extractedText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        setRawTextLines(lines);
+
         setHasRendered(true);
       }
     } catch (err) {
@@ -60,6 +69,78 @@ export default function Home() {
       alert('Error parsing Word document. Please ensure it is a valid .docx file.');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  // One-Click Formatted Word (.docx) Generator with Trade Mirror Margins
+  const handleExportDocx = async () => {
+    if (!rawTextLines.length) return;
+    setIsExporting(true);
+
+    try {
+      // Dimensions in twips (1 inch = 1440 twips)
+      const trimDimensionsTwips = {
+        '6x9': { width: 6 * 1440, height: 9 * 1440 },
+        '5.5x8.5': { width: 5.5 * 1440, height: 8.5 * 1440 },
+        '8.5x11': { width: 8.5 * 1440, height: 11 * 1440 },
+        '5x8': { width: 5 * 1440, height: 8 * 1440 },
+      };
+
+      const selectedTrim = trimDimensionsTwips[trimSize] || trimDimensionsTwips['6x9'];
+
+      const paragraphs = rawTextLines.map((line) => {
+        // Detect section headings
+        const isHeading = /^(chapter|contents|table of contents|dedication|acknowledgments|introduction|part)/i.test(line);
+
+        return new Paragraph({
+          children: [
+            new TextRun({
+              text: line,
+              font: 'Georgia',
+              size: isHeading ? 28 : 22, // 14pt for headings, 11pt for body
+              bold: isHeading,
+            }),
+          ],
+          heading: isHeading ? HeadingLevel.HEADING_1 : undefined,
+          spacing: {
+            line: 340, // 1.4 line height
+            before: isHeading ? 360 : 0,
+            after: isHeading ? 200 : 140,
+          },
+        });
+      });
+
+      const doc = new Document({
+        sections: [
+          {
+            properties: {
+              page: {
+                size: {
+                  width: selectedTrim.width,
+                  height: selectedTrim.height,
+                },
+                margin: {
+                  top: Math.round(topBottomMargin * 1440),
+                  bottom: Math.round(topBottomMargin * 1440),
+                  left: Math.round(gutter * 1440),        // Inside binding gutter
+                  right: Math.round(outsideMargin * 1440), // Outside trim margin
+                  mirrorMargins: true,                     // Alternating recto/verso book margins
+                },
+              },
+            },
+            children: paragraphs,
+          },
+        ],
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const cleanBaseName = fileName ? fileName.replace(/\.docx$/i, '') : 'Book';
+      saveAs(blob, `${cleanBaseName}_POD_Formatted_${trimSize}.docx`);
+    } catch (err) {
+      console.error(err);
+      alert('Error exporting formatted DOCX.');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -82,16 +163,27 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-2">
           {hasRendered && (
-            <button
-              onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs px-3.5 py-1.5 rounded-lg transition"
-            >
-              <Printer className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Print / Export PDF</span>
-            </button>
+            <>
+              <button
+                onClick={handleExportDocx}
+                disabled={isExporting}
+                className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs px-3.5 py-1.5 rounded-lg transition shadow-md shadow-indigo-600/20 disabled:opacity-50"
+              >
+                {isExporting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                <span>Export Formatted Word (.docx)</span>
+              </button>
+
+              <button
+                onClick={handlePrint}
+                className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs px-3.5 py-1.5 rounded-lg transition"
+              >
+                <Printer className="w-3.5 h-3.5 text-indigo-400" />
+                <span>PDF Print</span>
+              </button>
+            </>
           )}
           <span className="text-[11px] font-medium px-3 py-1 bg-slate-900 border border-slate-800 rounded-full text-emerald-400">
-            v2.0 Native Engine
+            v2.1 DOCX Export
           </span>
         </div>
       </header>
@@ -102,7 +194,7 @@ export default function Home() {
           Real Word Document Engine
         </h1>
         <p className="text-slate-400 text-xs md:text-sm max-w-lg mx-auto">
-          Client-side DOCX rendering with authentic page breaks, margins, headers, and trade-accurate typesetting.
+          Client-side DOCX rendering with trade-accurate mirror margins, and instant pre-formatted Word export.
         </p>
       </section>
 
@@ -192,7 +284,7 @@ export default function Home() {
         {fileName && (
           <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-indigo-400 font-mono">
             <FileCheck className="w-3.5 h-3.5" />
-            <span>Ready for view: {fileName}</span>
+            <span>Ready for view & export: {fileName}</span>
           </div>
         )}
       </section>
@@ -211,4 +303,4 @@ export default function Home() {
       </footer>
     </main>
   );
-}
+              }

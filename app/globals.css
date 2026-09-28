@@ -1,11 +1,30 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Print optimization for true Trade POD PDF export */
+@media print {
+  @page {
+    margin: 0;
+  }
 
-@layer base {
   body {
-    background-color: #020617;
-    color: #f8fafc;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Hide navigation, forms, inspectors, and footers */
+  header, footer, section:not(:last-of-type), .no-print {
+    display: none !important;
+  }
+
+  /* Reset layout container for pure sheet capture */
+  main {
+    padding: 0 !important;
+    background: transparent !important;
+  }
+
+  .docx-page-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    margin: 0 auto !important;
   }
 }

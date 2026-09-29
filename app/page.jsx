@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Upload, BookOpen, Layers, Download, RefreshCw, 
   CheckCircle2, Sparkles, Printer, Sliders, Key, X, 
-  Award, Calendar, Compass, Coffee, CheckSquare, ArrowRight
+  Award, Sun, Moon, CheckSquare, Coffee, Compass
 } from 'lucide-react';
 import { 
   Document, Packer, Paragraph, TextRun, HeadingLevel, 
@@ -14,6 +14,7 @@ import { generatePlannerDocx } from './plannerEngine';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('manuscript');
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [trimSize, setTrimSize] = useState('6x9');
   const [pageCount, setPageCount] = useState(120);
 
@@ -40,12 +41,20 @@ export default function Home() {
   useEffect(() => {
     const savedCredits = localStorage.getItem('ps_credits');
     const savedKey = localStorage.getItem('ps_gemini_key');
+    const savedTheme = localStorage.getItem('ps_theme');
     if (savedCredits !== null) setCredits(Number(savedCredits));
     if (savedKey) {
       setApiKey(savedKey);
       setTempKeyInput(savedKey);
     }
+    if (savedTheme === 'dark') setIsDarkMode(true);
   }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = !isDarkMode;
+    setIsDarkMode(nextTheme);
+    localStorage.setItem('ps_theme', nextTheme ? 'dark' : 'light');
+  };
 
   const saveApiKey = () => {
     setApiKey(tempKeyInput.trim());
@@ -215,29 +224,64 @@ export default function Home() {
     }
   };
     return (
-    <main className="min-h-screen bg-[#FBF9F5] text-[#2D2A26] flex flex-col items-center px-4 py-8 selection:bg-[#EADFD8] selection:text-[#B85D3E]">
-      {/* Atelier Header */}
-      <header className="w-full max-w-4xl flex items-center justify-between border-b border-[#EFEAE2] pb-5 mb-8">
+    <main className={`min-h-screen flex flex-col items-center px-4 py-8 transition-colors duration-300 ${
+      isDarkMode 
+        ? 'bg-[#121113] text-[#E8E6E3] selection:bg-[#3E2B25] selection:text-[#E07A5F]' 
+        : 'bg-[#FBF9F5] text-[#2D2A26] selection:bg-[#EADFD8] selection:text-[#B85D3E]'
+    }`}>
+      {/* Studio Header */}
+      <header className={`w-full max-w-4xl flex items-center justify-between border-b pb-5 mb-8 ${
+        isDarkMode ? 'border-[#262429]' : 'border-[#EFEAE2]'
+      }`}>
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-[#FAF4ED] border border-[#E9DFD3] rounded-2xl shadow-sm text-[#B85D3E]">
+          <div className={`p-2.5 rounded-2xl border shadow-sm ${
+            isDarkMode 
+              ? 'bg-[#1C1A20] border-[#2E2B35] text-[#E07A5F]' 
+              : 'bg-[#FAF4ED] border-[#E9DFD3] text-[#B85D3E]'
+          }`}>
             <BookOpen className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-base font-serif font-bold tracking-tight text-[#1F1C18]">PUBLISHSTUDIO</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#FAF3EC] text-[#B85D3E] font-medium border border-[#E9DFD3]">
-                Atelier 3.2
+              <span className={`text-base font-serif font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-[#1F1C18]'}`}>
+                PUBLISHSTUDIO
+              </span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${
+                isDarkMode 
+                  ? 'bg-[#2A1D1A] text-[#E07A5F] border-[#4A2D25]' 
+                  : 'bg-[#FAF3EC] text-[#B85D3E] border-[#E9DFD3]'
+              }`}>
+                Atelier 3.5
               </span>
             </div>
-            <span className="text-[11px] text-[#8C8479] tracking-wide font-sans">Craft Print & Planner Studio</span>
+            <span className={`text-[11px] font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'}`}>
+              Craft Print & Planner Studio
+            </span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Trial / BYOK Indicator */}
+          {/* Light / Dark Mode Toggle */}
+          <button
+            onClick={toggleTheme}
+            className={`p-2 rounded-full border transition shadow-sm ${
+              isDarkMode 
+                ? 'bg-[#1C1A20] border-[#2E2B35] text-amber-300 hover:bg-[#25232B]' 
+                : 'bg-white border-[#E8E1D7] text-[#6B645A] hover:bg-[#FAF7F2]'
+            }`}
+            title="Toggle Theme"
+          >
+            {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+
+          {/* Credits / BYOK Pill */}
           <button
             onClick={() => setShowKeyModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#E8E1D7] bg-white hover:bg-[#FAF7F2] text-xs transition shadow-sm font-sans"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs transition shadow-sm font-sans ${
+              isDarkMode 
+                ? 'bg-[#1C1A20] border-[#2E2B35] hover:bg-[#25232B]' 
+                : 'bg-white border-[#E8E1D7] hover:bg-[#FAF7F2]'
+            }`}
           >
             {apiKey ? (
               <>
@@ -246,34 +290,38 @@ export default function Home() {
               </>
             ) : (
               <>
-                <Award className="w-3.5 h-3.5 text-[#B85D3E]" />
-                <span className="text-[#6B645A] font-medium">{credits} Free Credits</span>
+                <Award className={`w-3.5 h-3.5 ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`} />
+                <span className={`font-medium ${isDarkMode ? 'text-[#C5C2BD]' : 'text-[#6B645A]'}`}>
+                  {credits} Free Credits
+                </span>
               </>
             )}
           </button>
 
           {/* Mode Switcher */}
-          <div className="flex items-center bg-[#F1ECE4] p-1 rounded-full border border-[#E5DED4]">
+          <div className={`flex items-center p-1 rounded-full border ${
+            isDarkMode ? 'bg-[#1A181E] border-[#2B2833]' : 'bg-[#F1ECE4] border-[#E5DED4]'
+          }`}>
             <button
               onClick={() => setActiveTab('manuscript')}
               className={`flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-medium transition ${
                 activeTab === 'manuscript'
-                  ? 'bg-white text-[#1F1C18] shadow-sm'
-                  : 'text-[#827A70] hover:text-[#2D2A26]'
+                  ? (isDarkMode ? 'bg-[#2B2833] text-white shadow-sm' : 'bg-white text-[#1F1C18] shadow-sm')
+                  : (isDarkMode ? 'text-[#8E8B92] hover:text-white' : 'text-[#827A70] hover:text-[#2D2A26]')
               }`}
             >
-              <Sliders className="w-3.5 h-3.5 text-[#B85D3E]" />
+              <Sliders className={`w-3.5 h-3.5 ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`} />
               <span>Typeset</span>
             </button>
             <button
               onClick={() => setActiveTab('planner')}
               className={`flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-medium transition ${
                 activeTab === 'planner'
-                  ? 'bg-white text-[#1F1C18] shadow-sm'
-                  : 'text-[#827A70] hover:text-[#2D2A26]'
+                  ? (isDarkMode ? 'bg-[#2B2833] text-white shadow-sm' : 'bg-white text-[#1F1C18] shadow-sm')
+                  : (isDarkMode ? 'text-[#8E8B92] hover:text-white' : 'text-[#827A70] hover:text-[#2D2A26]')
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-[#B85D3E]" />
+              <Sparkles className={`w-3.5 h-3.5 ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`} />
               <span>Planner</span>
             </button>
           </div>
@@ -281,11 +329,15 @@ export default function Home() {
       </header>
 
       {/* Manufacturing Trim & Margins Card */}
-      <section className="w-full max-w-4xl bg-white border border-[#EFEAE2] rounded-3xl p-6 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-8">
+      <section className={`w-full max-w-4xl border rounded-3xl p-6 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-8 transition ${
+        isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
+      }`}>
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-[#B85D3E]" />
-            <h2 className="text-xs font-bold text-[#1F1C18] uppercase tracking-wider font-sans">Manufacturing Specifications</h2>
+            <Layers className={`w-4 h-4 ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`} />
+            <h2 className={`text-xs font-bold uppercase tracking-wider font-sans ${isDarkMode ? 'text-zinc-200' : 'text-[#1F1C18]'}`}>
+              Manufacturing Specifications
+            </h2>
           </div>
           <span className="text-[11px] text-[#4F7358] font-sans bg-[#F0F5F1] border border-[#D5E3D8] px-2.5 py-0.5 rounded-full font-medium">
             POD Verified
@@ -294,13 +346,19 @@ export default function Home() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
           <div>
-            <label className="text-[11px] font-semibold text-[#8C8479] uppercase tracking-wider block mb-2 font-sans">
+            <label className={`text-[11px] font-semibold uppercase tracking-wider block mb-2 font-sans ${
+              isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'
+            }`}>
               Trim Dimensions
             </label>
             <select
               value={trimSize}
               onChange={(e) => setTrimSize(e.target.value)}
-              className="w-full bg-[#FAF9F6] border border-[#E8E2D8] rounded-xl px-3.5 py-2.5 text-xs text-[#2D2A26] font-medium focus:outline-none focus:border-[#B85D3E] transition"
+              className={`w-full border rounded-xl px-3.5 py-2.5 text-xs font-medium focus:outline-none transition ${
+                isDarkMode 
+                  ? 'bg-[#121114] border-[#2D2A35] text-zinc-200 focus:border-[#E07A5F]' 
+                  : 'bg-[#FAF9F6] border-[#E8E2D8] text-[#2D2A26] focus:border-[#B85D3E]'
+              }`}
             >
               <option value="6x9">6" x 9" (Standard Trade Paperback)</option>
               <option value="5.5x8.5">5.5" x 8.5" (Digest / Fiction)</option>
@@ -310,7 +368,9 @@ export default function Home() {
           </div>
 
           <div>
-            <label className="text-[11px] font-semibold text-[#8C8479] uppercase tracking-wider block mb-2 font-sans">
+            <label className={`text-[11px] font-semibold uppercase tracking-wider block mb-2 font-sans ${
+              isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'
+            }`}>
               {activeTab === 'manuscript' ? `Manuscript Extent (${pageCount} pages)` : `Planner Duration (${plannerDays} pages)`}
             </label>
             <input
@@ -323,23 +383,33 @@ export default function Home() {
                 if (activeTab === 'manuscript') setPageCount(val);
                 else setPlannerDays(val);
               }}
-              className="w-full h-2 bg-[#EFEAE2] rounded-lg appearance-none cursor-pointer accent-[#B85D3E] mt-3"
+              className={`w-full h-2 rounded-lg appearance-none cursor-pointer accent-[#B85D3E] mt-3 ${
+                isDarkMode ? 'bg-[#292630]' : 'bg-[#EFEAE2]'
+              }`}
             />
           </div>
         </div>
 
-        <div className="bg-[#FAF8F5] border border-[#EFEAE2] rounded-2xl p-4 grid grid-cols-3 gap-3 text-center">
+        <div className={`border rounded-2xl p-4 grid grid-cols-3 gap-3 text-center ${
+          isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'
+        }`}>
           <div>
-            <span className="text-[10px] text-[#9E968B] uppercase tracking-wider block mb-1 font-sans">Spine Gutter</span>
-            <span className="text-sm font-bold text-[#B85D3E] font-mono">{gutter}"</span>
+            <span className={`text-[10px] uppercase tracking-wider block mb-1 font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#9E968B]'}`}>
+              Spine Gutter
+            </span>
+            <span className={`text-sm font-bold font-mono ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`}>{gutter}"</span>
           </div>
           <div>
-            <span className="text-[10px] text-[#9E968B] uppercase tracking-wider block mb-1 font-sans">Outside Margin</span>
-            <span className="text-sm font-semibold text-[#3B3731] font-mono">{outsideMargin}"</span>
+            <span className={`text-[10px] uppercase tracking-wider block mb-1 font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#9E968B]'}`}>
+              Outside Margin
+            </span>
+            <span className={`text-sm font-semibold font-mono ${isDarkMode ? 'text-zinc-200' : 'text-[#3B3731]'}`}>{outsideMargin}"</span>
           </div>
           <div>
-            <span className="text-[10px] text-[#9E968B] uppercase tracking-wider block mb-1 font-sans">Top / Bottom</span>
-            <span className="text-sm font-semibold text-[#3B3731] font-mono">{topBottomMargin}"</span>
+            <span className={`text-[10px] uppercase tracking-wider block mb-1 font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#9E968B]'}`}>
+              Top / Bottom
+            </span>
+            <span className={`text-sm font-semibold font-mono ${isDarkMode ? 'text-zinc-200' : 'text-[#3B3731]'}`}>{topBottomMargin}"</span>
           </div>
         </div>
       </section>
@@ -347,7 +417,9 @@ export default function Home() {
       {/* TAB 1: TYPESET STUDIO */}
       {activeTab === 'manuscript' && (
         <>
-          <section className="w-full max-w-4xl bg-white border border-[#EFEAE2] rounded-3xl p-6 sm:p-8 text-center shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-8">
+          <section className={`w-full max-w-4xl border rounded-3xl p-6 sm:p-8 text-center shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-8 transition ${
+            isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
+          }`}>
             <input
               ref={fileInputRef}
               type="file"
@@ -380,7 +452,11 @@ export default function Home() {
                   <button
                     onClick={handleExportManuscriptDocx}
                     disabled={isExporting}
-                    className="inline-flex items-center gap-1.5 bg-[#FAF8F5] hover:bg-[#F2EDE4] border border-[#E5DDD1] text-[#2D2A26] font-medium text-xs px-4 py-3 rounded-full transition"
+                    className={`inline-flex items-center gap-1.5 border font-medium text-xs px-4 py-3 rounded-full transition ${
+                      isDarkMode 
+                        ? 'bg-[#222026] hover:bg-[#2B2930] border-[#34313B] text-zinc-200' 
+                        : 'bg-[#FAF8F5] hover:bg-[#F2EDE4] border-[#E5DDD1] text-[#2D2A26]'
+                    }`}
                   >
                     {isExporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-[#5A8264]" />}
                     <span>Export Mirror-Margin DOCX</span>
@@ -388,9 +464,13 @@ export default function Home() {
 
                   <button
                     onClick={() => window.print()}
-                    className="inline-flex items-center gap-1.5 bg-[#FAF8F5] hover:bg-[#F2EDE4] border border-[#E5DDD1] text-[#2D2A26] font-medium text-xs px-4 py-3 rounded-full transition"
+                    className={`inline-flex items-center gap-1.5 border font-medium text-xs px-4 py-3 rounded-full transition ${
+                      isDarkMode 
+                        ? 'bg-[#222026] hover:bg-[#2B2930] border-[#34313B] text-zinc-200' 
+                        : 'bg-[#FAF8F5] hover:bg-[#F2EDE4] border-[#E5DDD1] text-[#2D2A26]'
+                    }`}
                   >
-                    <Printer className="w-4 h-4 text-[#B85D3E]" />
+                    <Printer className={`w-4 h-4 ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`} />
                     <span>Print / Save Vector PDF</span>
                   </button>
                 </>
@@ -415,105 +495,141 @@ export default function Home() {
       )}
             {/* TAB 2: PLANNER GENERATOR */}
       {activeTab === 'planner' && (
-        <section className="w-full max-w-4xl bg-white border border-[#EFEAE2] rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-8">
+        <section className={`w-full max-w-4xl border rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-8 transition ${
+          isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
+        }`}>
           <div className="flex items-center gap-2 mb-6">
-            <Sparkles className="w-4 h-4 text-[#B85D3E]" />
-            <h2 className="text-xs font-bold text-[#1F1C18] uppercase tracking-wider font-sans">Curated Planner Archetypes</h2>
+            <Sparkles className={`w-4 h-4 ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`} />
+            <h2 className={`text-xs font-bold uppercase tracking-wider font-sans ${isDarkMode ? 'text-zinc-200' : 'text-[#1F1C18]'}`}>
+              Curated Planner Archetypes
+            </h2>
           </div>
 
-          {/* Archetype Visual Book Cards */}
+          {/* Archetype Cards with Real Editorial Photography */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
             {/* Daily Focus Card */}
             <div 
               onClick={() => setPlannerType('daily_focus')}
-              className={`p-4 rounded-3xl border cursor-pointer transition-all duration-200 text-left flex flex-col justify-between ${
+              className={`p-4 rounded-3xl border cursor-pointer transition-all duration-200 text-left flex flex-col justify-between overflow-hidden ${
                 plannerType === 'daily_focus' 
-                  ? 'bg-[#FAF4ED] border-[#B85D3E] shadow-md ring-2 ring-[#B85D3E]/20' 
-                  : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF] hover:shadow-sm'
+                  ? (isDarkMode ? 'bg-[#241F20] border-[#E07A5F] shadow-lg ring-2 ring-[#E07A5F]/20' : 'bg-[#FAF4ED] border-[#B85D3E] shadow-md ring-2 ring-[#B85D3E]/20') 
+                  : (isDarkMode ? 'bg-[#151418] border-[#282630] hover:border-[#3A3745]' : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF]')
               }`}
             >
-              <div className="w-full h-32 rounded-2xl bg-gradient-to-br from-[#F5EDE2] to-[#EAE0D2] border border-[#E0D5C5] p-3 flex flex-col justify-between mb-4 relative overflow-hidden shadow-inner">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-[#8C5E43] bg-white/80 px-2 py-0.5 rounded-full border border-[#DDCFC0]">
-                    90-Day Focus
-                  </span>
-                  <div className="w-2.5 h-7 bg-[#B85D3E] rounded-b-sm shadow-sm opacity-90" />
-                </div>
-                <div className="space-y-1">
-                  <div className="w-12 h-1 bg-[#8C5E43]/40 rounded-full" />
-                  <div className="text-xs font-serif font-bold text-[#3B2D24] tracking-tight">The Focused Day</div>
-                  <div className="w-20 h-1 bg-[#8C5E43]/20 rounded-full" />
+              <div className="w-full h-36 rounded-2xl relative overflow-hidden mb-4 shadow-sm group">
+                <img 
+                  src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80" 
+                  alt="Daily Focus" 
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-3 flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-bold text-white bg-black/40 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-white/20">
+                      90-Day Sprint
+                    </span>
+                    <div className="w-2.5 h-6 bg-[#B85D3E] rounded-b-sm shadow-sm" />
+                  </div>
+                  <div className="text-white">
+                    <div className="text-xs font-serif font-bold tracking-wide">The Focused Day</div>
+                    <span className="text-[10px] text-zinc-300 font-sans">Cognitive Deep Work</span>
+                  </div>
                 </div>
               </div>
 
               <div>
-                <span className="text-sm font-bold text-[#1F1C18] block mb-1 font-serif">Daily Focus & Timeblock</span>
-                <p className="text-[11px] text-[#6B6357] leading-relaxed">Priorities, time blocks, and rotating cognitive deep work prompts.</p>
+                <span className={`text-sm font-bold block mb-1 font-serif ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>
+                  Daily Focus & Timeblock
+                </span>
+                <p className={`text-[11px] leading-relaxed ${isDarkMode ? 'text-[#9E9BA3]' : 'text-[#6B6357]'}`}>
+                  Priorities, time blocks, and rotating cognitive deep work prompts.
+                </p>
               </div>
             </div>
 
             {/* Meal & Kitchen Command Card */}
             <div 
               onClick={() => setPlannerType('meal_grocery')}
-              className={`p-4 rounded-3xl border cursor-pointer transition-all duration-200 text-left flex flex-col justify-between ${
+              className={`p-4 rounded-3xl border cursor-pointer transition-all duration-200 text-left flex flex-col justify-between overflow-hidden ${
                 plannerType === 'meal_grocery' 
-                  ? 'bg-[#FAF4ED] border-[#B85D3E] shadow-md ring-2 ring-[#B85D3E]/20' 
-                  : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF] hover:shadow-sm'
+                  ? (isDarkMode ? 'bg-[#241F20] border-[#E07A5F] shadow-lg ring-2 ring-[#E07A5F]/20' : 'bg-[#FAF4ED] border-[#B85D3E] shadow-md ring-2 ring-[#B85D3E]/20') 
+                  : (isDarkMode ? 'bg-[#151418] border-[#282630] hover:border-[#3A3745]' : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF]')
               }`}
             >
-              <div className="w-full h-32 rounded-2xl bg-gradient-to-br from-[#EDF2EC] to-[#DEE8DC] border border-[#CEDBCC] p-3 flex flex-col justify-between mb-4 relative overflow-hidden shadow-inner">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-[#4F7358] bg-white/80 px-2 py-0.5 rounded-full border border-[#CCDBCF]">
-                    Weekly Table
-                  </span>
-                  <div className="w-2.5 h-7 bg-[#5A8264] rounded-b-sm shadow-sm opacity-90" />
-                </div>
-                <div className="space-y-1">
-                  <div className="w-12 h-1 bg-[#4F7358]/40 rounded-full" />
-                  <div className="text-xs font-serif font-bold text-[#233527] tracking-tight">Kitchen & Pantry</div>
-                  <div className="w-20 h-1 bg-[#4F7358]/20 rounded-full" />
+              <div className="w-full h-36 rounded-2xl relative overflow-hidden mb-4 shadow-sm group">
+                <img 
+                  src="https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=600&q=80" 
+                  alt="Meal Command" 
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-3 flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-bold text-white bg-black/40 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-white/20">
+                      Weekly Rotation
+                    </span>
+                    <div className="w-2.5 h-6 bg-[#5A8264] rounded-b-sm shadow-sm" />
+                  </div>
+                  <div className="text-white">
+                    <div className="text-xs font-serif font-bold tracking-wide">Kitchen & Pantry</div>
+                    <span className="text-[10px] text-zinc-300 font-sans">Dinner & Grocery Matrix</span>
+                  </div>
                 </div>
               </div>
 
               <div>
-                <span className="text-sm font-bold text-[#1F1C18] block mb-1 font-serif">Meal & Kitchen Command</span>
-                <p className="text-[11px] text-[#6B6357] leading-relaxed">Weekly lunch & dinner rotation tables with pantry checklists.</p>
+                <span className={`text-sm font-bold block mb-1 font-serif ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>
+                  Meal & Kitchen Command
+                </span>
+                <p className={`text-[11px] leading-relaxed ${isDarkMode ? 'text-[#9E9BA3]' : 'text-[#6B6357]'}`}>
+                  Weekly lunch & dinner rotation tables with pantry checklists.
+                </p>
               </div>
             </div>
 
             {/* Habit Tracking Matrix Card */}
             <div 
               onClick={() => setPlannerType('habit_matrix')}
-              className={`p-4 rounded-3xl border cursor-pointer transition-all duration-200 text-left flex flex-col justify-between ${
+              className={`p-4 rounded-3xl border cursor-pointer transition-all duration-200 text-left flex flex-col justify-between overflow-hidden ${
                 plannerType === 'habit_matrix' 
-                  ? 'bg-[#FAF4ED] border-[#B85D3E] shadow-md ring-2 ring-[#B85D3E]/20' 
-                  : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF] hover:shadow-sm'
+                  ? (isDarkMode ? 'bg-[#241F20] border-[#E07A5F] shadow-lg ring-2 ring-[#E07A5F]/20' : 'bg-[#FAF4ED] border-[#B85D3E] shadow-md ring-2 ring-[#B85D3E]/20') 
+                  : (isDarkMode ? 'bg-[#151418] border-[#282630] hover:border-[#3A3745]' : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF]')
               }`}
             >
-              <div className="w-full h-32 rounded-2xl bg-gradient-to-br from-[#ECECF4] to-[#DDDDEB] border border-[#D1D1E3] p-3 flex flex-col justify-between mb-4 relative overflow-hidden shadow-inner">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-[#565384] bg-white/80 px-2 py-0.5 rounded-full border border-[#CAC8DF]">
-                    Cycle Matrix
-                  </span>
-                  <div className="w-2.5 h-7 bg-[#65619A] rounded-b-sm shadow-sm opacity-90" />
-                </div>
-                <div className="space-y-1">
-                  <div className="w-12 h-1 bg-[#565384]/40 rounded-full" />
-                  <div className="text-xs font-serif font-bold text-[#27253D] tracking-tight">Atomic Rituals</div>
-                  <div className="w-20 h-1 bg-[#565384]/20 rounded-full" />
+              <div className="w-full h-36 rounded-2xl relative overflow-hidden mb-4 shadow-sm group">
+                <img 
+                  src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=600&q=80" 
+                  alt="Habit Matrix" 
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-3 flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-bold text-white bg-black/40 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-white/20">
+                      Habit Loops
+                    </span>
+                    <div className="w-2.5 h-6 bg-[#65619A] rounded-b-sm shadow-sm" />
+                  </div>
+                  <div className="text-white">
+                    <div className="text-xs font-serif font-bold tracking-wide">Atomic Rituals</div>
+                    <span className="text-[10px] text-zinc-300 font-sans">7-Day Consistency Grids</span>
+                  </div>
                 </div>
               </div>
 
               <div>
-                <span className="text-sm font-bold text-[#1F1C18] block mb-1 font-serif">Habit Tracking Matrix</span>
-                <p className="text-[11px] text-[#6B6357] leading-relaxed">7-day tracker grids and habit loops with strategic focus rules.</p>
+                <span className={`text-sm font-bold block mb-1 font-serif ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>
+                  Habit Tracking Matrix
+                </span>
+                <p className={`text-[11px] leading-relaxed ${isDarkMode ? 'text-[#9E9BA3]' : 'text-[#6B6357]'}`}>
+                  7-day tracker grids and habit loops with strategic focus rules.
+                </p>
               </div>
             </div>
           </div>
 
           {/* Custom Infill Direction */}
           <div className="mb-6">
-            <label className="text-[11px] font-semibold text-[#8C8479] uppercase tracking-wider block mb-2 font-sans">
+            <label className={`text-[11px] font-semibold uppercase tracking-wider block mb-2 font-sans ${
+              isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'
+            }`}>
               Custom Sub-Niche / AI Direction (Optional)
             </label>
             <input
@@ -521,13 +637,19 @@ export default function Home() {
               placeholder="e.g. Stoic Philosophy, Mediterranean Diet, ADHD Daily Executive Routine"
               value={customNiche}
               onChange={(e) => setCustomNiche(e.target.value)}
-              className="w-full bg-[#FAF9F6] border border-[#E8E2D8] rounded-xl px-4 py-2.5 text-xs text-[#2D2A26] placeholder:text-[#9E968B] focus:outline-none focus:border-[#B85D3E] transition"
+              className={`w-full border rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none transition ${
+                isDarkMode 
+                  ? 'bg-[#121114] border-[#2D2A35] text-zinc-200 placeholder:text-zinc-600 focus:border-[#E07A5F]' 
+                  : 'bg-[#FAF9F6] border-[#E8E2D8] text-[#2D2A26] placeholder:text-[#9E968B] focus:border-[#B85D3E]'
+              }`}
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-5 border-t border-[#EFEAE2]">
-            <div className="text-xs text-[#6B6357] font-mono">
-              Output: <span className="text-[#1F1C18] font-bold">{plannerDays} Pages</span> • Trim: <span className="text-[#1F1C18] font-bold">{trimSize}"</span> • Gutter: <span className="text-[#B85D3E] font-bold">{gutter}"</span>
+          <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 pt-5 border-t ${
+            isDarkMode ? 'border-[#292630]' : 'border-[#EFEAE2]'
+          }`}>
+            <div className={`text-xs font-mono ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#6B6357]'}`}>
+              Output: <span className={`font-bold ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>{plannerDays} Pages</span> • Trim: <span className={`font-bold ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>{trimSize}"</span> • Gutter: <span className={`font-bold ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`}>{gutter}"</span>
             </div>
 
             <button
@@ -560,23 +682,27 @@ export default function Home() {
 
       {/* BYOK Settings Modal */}
       {showKeyModal && (
-        <div className="fixed inset-0 z-50 bg-[#1F1C18]/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white border border-[#EFEAE2] rounded-3xl p-6 sm:p-7 shadow-2xl relative text-left">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`w-full max-w-md border rounded-3xl p-6 sm:p-7 shadow-2xl relative text-left transition ${
+            isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
+          }`}>
             <button 
               onClick={() => setShowKeyModal(false)}
-              className="absolute top-5 right-5 text-[#8C8479] hover:text-[#1F1C18]"
+              className={`absolute top-5 right-5 ${isDarkMode ? 'text-zinc-400 hover:text-white' : 'text-[#8C8479] hover:text-[#1F1C18]'}`}
             >
               <X className="w-4 h-4" />
             </button>
 
             <div className="flex items-center gap-2.5 mb-3">
-              <div className="p-2 bg-[#FAF4ED] rounded-xl text-[#B85D3E]">
+              <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-[#2A1D1A] text-[#E07A5F]' : 'bg-[#FAF4ED] text-[#B85D3E]'}`}>
                 <Key className="w-4 h-4" />
               </div>
-              <h3 className="text-sm font-bold text-[#1F1C18] font-serif">Google Gemini API Key (BYOK)</h3>
+              <h3 className={`text-sm font-bold font-serif ${isDarkMode ? 'text-white' : 'text-[#1F1C18]'}`}>
+                Google Gemini API Key (BYOK)
+              </h3>
             </div>
 
-            <p className="text-xs text-[#6B6357] mb-4 leading-relaxed font-sans">
+            <p className={`text-xs mb-4 leading-relaxed font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#6B6357]'}`}>
               You receive 3 free generations via the curated vault. To unlock unlimited generations with custom dynamic AI prompts, add your free Google Gemini API key.
             </p>
 
@@ -585,7 +711,11 @@ export default function Home() {
               placeholder="AIzaSy..."
               value={tempKeyInput}
               onChange={(e) => setTempKeyInput(e.target.value)}
-              className="w-full bg-[#FAF9F6] border border-[#E8E2D8] rounded-xl px-3.5 py-2.5 text-xs text-[#2D2A26] placeholder:text-[#9E968B] focus:outline-none focus:border-[#B85D3E] mb-4 font-mono"
+              className={`w-full border rounded-xl px-3.5 py-2.5 text-xs mb-4 font-mono transition ${
+                isDarkMode 
+                  ? 'bg-[#121114] border-[#2D2A35] text-zinc-200 placeholder:text-zinc-600 focus:border-[#E07A5F]' 
+                  : 'bg-[#FAF9F6] border-[#E8E2D8] text-[#2D2A26] placeholder:text-[#9E968B] focus:border-[#B85D3E]'
+              }`}
             />
 
             <div className="flex items-center justify-end gap-2">
@@ -596,7 +726,9 @@ export default function Home() {
                   localStorage.removeItem('ps_gemini_key');
                   setShowKeyModal(false);
                 }}
-                className="px-3.5 py-2 rounded-full text-xs text-[#8C8479] hover:text-[#1F1C18] transition"
+                className={`px-3.5 py-2 rounded-full text-xs transition ${
+                  isDarkMode ? 'text-[#8E8B92] hover:text-white' : 'text-[#8C8479] hover:text-[#1F1C18]'
+                }`}
               >
                 Clear Key
               </button>
@@ -611,10 +743,14 @@ export default function Home() {
         </div>
       )}
 
-      {/* Atelier Footer */}
-      <footer className="w-full max-w-4xl border-t border-[#EFEAE2] mt-auto pt-6 text-center text-[11px] text-[#9E968B] font-sans">
+      {/* Studio Footer */}
+      <footer className={`w-full max-w-4xl border-t mt-auto pt-6 text-center text-[11px] font-sans ${
+        isDarkMode ? 'border-[#262429] text-[#716E77]' : 'border-[#EFEAE2] text-[#9E968B]'
+      }`}>
         &copy; {new Date().getFullYear()} PUBLISHSTUDIO • Atelier Edition • Zero-Server Architecture
       </footer>
     </main>
   );
 }
+
+                             

@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Upload, BookOpen, Layers, Download, RefreshCw, 
-  CheckCircle2, Sparkles, Printer, Sliders, Key, X, Award
+  CheckCircle2, Sparkles, Printer, Sliders, Key, X, 
+  Award, Calendar, Compass, Coffee, CheckSquare, ArrowRight
 } from 'lucide-react';
 import { 
   Document, Packer, Paragraph, TextRun, HeadingLevel, 
@@ -170,7 +171,7 @@ export default function Home() {
       const blob = await Packer.toBlob(doc);
       const cleanBase = fileName ? fileName.replace(/\.docx$/i, '') : 'Manuscript';
       saveAs(blob, `${cleanBase}_Formatted_${trimSize}.docx`);
-      setStatusMessage('Export complete: Formatted DOCX ready for distribution.');
+      setStatusMessage('Manuscript successfully exported with mirror margins.');
     } catch (err) {
       console.error(err);
       alert('Error creating DOCX file.');
@@ -206,7 +207,7 @@ export default function Home() {
         localStorage.setItem('ps_credits', nextCredits.toString());
       }
 
-      setStatusMessage(`Generated ${plannerDays}-page interior DOCX successfully!`);
+      setStatusMessage(`Complete: Generated ${plannerDays}-page interior DOCX.`);
     } catch (err) {
       console.error(err);
       alert('Error generating planner interior.');
@@ -214,84 +215,93 @@ export default function Home() {
       setIsGeneratingPlanner(false);
     }
   };
-
-  return (
-    <main className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col items-center px-4 py-8 selection:bg-indigo-600 selection:text-white">
-      {/* Studio Header */}
-      <header className="w-full max-w-5xl flex items-center justify-between border-b border-zinc-800/80 pb-5 mb-8">
+    return (
+    <main className="min-h-screen bg-[#FBF9F5] text-[#2D2A26] flex flex-col items-center px-4 py-8 selection:bg-[#EADFD8] selection:text-[#B85D3E]">
+      {/* Atelier Header */}
+      <header className="w-full max-w-4xl flex items-center justify-between border-b border-[#EFEAE2] pb-5 mb-8">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-gradient-to-tr from-indigo-600 to-violet-500 rounded-xl shadow-lg shadow-indigo-600/20">
-            <BookOpen className="w-5 h-5 text-white" />
+          <div className="p-2.5 bg-[#FAF4ED] border border-[#E9DFD3] rounded-2xl shadow-sm text-[#B85D3E]">
+            <BookOpen className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-base font-semibold tracking-tight text-white block">PUBLISHSTUDIO</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 font-mono">v3.1 PRO</span>
+              <span className="text-base font-serif font-bold tracking-tight text-[#1F1C18]">PUBLISHSTUDIO</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#FAF3EC] text-[#B85D3E] font-medium border border-[#E9DFD3]">
+                Atelier 3.2
+              </span>
             </div>
-            <span className="text-[11px] text-zinc-400 font-mono tracking-wider uppercase">Algorithmic Publishing OS</span>
+            <span className="text-[11px] text-[#8C8479] tracking-wide font-sans">Craft Print & Planner Studio</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
+          {/* Trial / BYOK Indicator */}
           <button
             onClick={() => setShowKeyModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-800 bg-zinc-900 hover:bg-zinc-800/80 text-xs font-mono transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#E8E1D7] bg-white hover:bg-[#FAF7F2] text-xs transition shadow-sm font-sans"
           >
             {apiKey ? (
               <>
-                <Key className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400">BYOK Active</span>
+                <Key className="w-3.5 h-3.5 text-[#5A8264]" />
+                <span className="text-[#5A8264] font-medium">BYOK Active</span>
               </>
             ) : (
               <>
-                <Award className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-zinc-300">{credits} Credits</span>
+                <Award className="w-3.5 h-3.5 text-[#B85D3E]" />
+                <span className="text-[#6B645A] font-medium">{credits} Free Credits</span>
               </>
             )}
           </button>
 
-          <div className="flex items-center bg-zinc-900/90 p-1 rounded-xl border border-zinc-800">
+          {/* Mode Switcher */}
+          <div className="flex items-center bg-[#F1ECE4] p-1 rounded-full border border-[#E5DED4]">
             <button
               onClick={() => setActiveTab('manuscript')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition ${
-                activeTab === 'manuscript' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+              className={`flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-medium transition ${
+                activeTab === 'manuscript'
+                  ? 'bg-white text-[#1F1C18] shadow-sm'
+                  : 'text-[#827A70] hover:text-[#2D2A26]'
               }`}
             >
-              <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+              <Sliders className="w-3.5 h-3.5 text-[#B85D3E]" />
               <span>Typeset</span>
             </button>
             <button
               onClick={() => setActiveTab('planner')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition ${
-                activeTab === 'planner' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+              className={`flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-medium transition ${
+                activeTab === 'planner'
+                  ? 'bg-white text-[#1F1C18] shadow-sm'
+                  : 'text-[#827A70] hover:text-[#2D2A26]'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+              <Sparkles className="w-3.5 h-3.5 text-[#B85D3E]" />
               <span>Planner</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* Manufacturing Trim & Margins */}
-      <section className="w-full max-w-4xl bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 rounded-2xl p-6 shadow-2xl mb-8">
+      {/* Manufacturing Trim & Margins Card */}
+      <section className="w-full max-w-4xl bg-white border border-[#EFEAE2] rounded-3xl p-6 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-8">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-indigo-400" />
-            <h2 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">Manufacturing Trim & Margins</h2>
+            <Layers className="w-4 h-4 text-[#B85D3E]" />
+            <h2 className="text-xs font-bold text-[#1F1C18] uppercase tracking-wider font-sans">Manufacturing Specifications</h2>
           </div>
-          <span className="text-[11px] text-emerald-400 font-mono bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded-md">
-            POD Validated
+          <span className="text-[11px] text-[#4F7358] font-sans bg-[#F0F5F1] border border-[#D5E3D8] px-2.5 py-0.5 rounded-full font-medium">
+            POD Verified
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
           <div>
-            <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider block mb-2">Trim Dimensions</label>
+            <label className="text-[11px] font-semibold text-[#8C8479] uppercase tracking-wider block mb-2 font-sans">
+              Trim Dimensions
+            </label>
             <select
               value={trimSize}
               onChange={(e) => setTrimSize(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500 transition"
+              className="w-full bg-[#FAF9F6] border border-[#E8E2D8] rounded-xl px-3.5 py-2.5 text-xs text-[#2D2A26] font-medium focus:outline-none focus:border-[#B85D3E] transition"
             >
               <option value="6x9">6" x 9" (Standard Trade Paperback)</option>
               <option value="5.5x8.5">5.5" x 8.5" (Digest / Fiction)</option>
@@ -301,8 +311,8 @@ export default function Home() {
           </div>
 
           <div>
-            <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider block mb-2">
-              {activeTab === 'manuscript' ? `Target Page Count (${pageCount})` : `Interior Duration (${plannerDays} pages)`}
+            <label className="text-[11px] font-semibold text-[#8C8479] uppercase tracking-wider block mb-2 font-sans">
+              {activeTab === 'manuscript' ? `Manuscript Extent (${pageCount} pages)` : `Planner Duration (${plannerDays} pages)`}
             </label>
             <input
               type="range"
@@ -314,31 +324,31 @@ export default function Home() {
                 if (activeTab === 'manuscript') setPageCount(val);
                 else setPlannerDays(val);
               }}
-              className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 mt-3"
+              className="w-full h-2 bg-[#EFEAE2] rounded-lg appearance-none cursor-pointer accent-[#B85D3E] mt-3"
             />
           </div>
         </div>
 
-        <div className="bg-zinc-950/80 border border-zinc-800/70 rounded-xl p-4 grid grid-cols-3 gap-3 text-center font-mono">
+        <div className="bg-[#FAF8F5] border border-[#EFEAE2] rounded-2xl p-4 grid grid-cols-3 gap-3 text-center">
           <div>
-            <span className="text-[10px] text-zinc-500 uppercase tracking-wider block mb-1">Binding Gutter</span>
-            <span className="text-sm font-semibold text-indigo-400">{gutter}"</span>
+            <span className="text-[10px] text-[#9E968B] uppercase tracking-wider block mb-1 font-sans">Spine Gutter</span>
+            <span className="text-sm font-bold text-[#B85D3E] font-mono">{gutter}"</span>
           </div>
           <div>
-            <span className="text-[10px] text-zinc-500 uppercase tracking-wider block mb-1">Outer Margin</span>
-            <span className="text-sm font-semibold text-zinc-300">{outsideMargin}"</span>
+            <span className="text-[10px] text-[#9E968B] uppercase tracking-wider block mb-1 font-sans">Outside Margin</span>
+            <span className="text-sm font-semibold text-[#3B3731] font-mono">{outsideMargin}"</span>
           </div>
           <div>
-            <span className="text-[10px] text-zinc-500 uppercase tracking-wider block mb-1">Top / Bottom</span>
-            <span className="text-sm font-semibold text-zinc-300">{topBottomMargin}"</span>
+            <span className="text-[10px] text-[#9E968B] uppercase tracking-wider block mb-1 font-sans">Top / Bottom</span>
+            <span className="text-sm font-semibold text-[#3B3731] font-mono">{topBottomMargin}"</span>
           </div>
         </div>
       </section>
 
-      {/* Typeset Studio Tab */}
+      {/* TAB 1: TYPESET STUDIO */}
       {activeTab === 'manuscript' && (
         <>
-          <section className="w-full max-w-4xl bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 rounded-2xl p-6 text-center shadow-2xl mb-8">
+          <section className="w-full max-w-4xl bg-white border border-[#EFEAE2] rounded-3xl p-6 sm:p-8 text-center shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-8">
             <input
               ref={fileInputRef}
               type="file"
@@ -351,7 +361,7 @@ export default function Home() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isProcessing}
-                className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs px-5 py-3 rounded-xl transition shadow-lg shadow-indigo-600/30 disabled:opacity-50"
+                className="inline-flex items-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-5 py-3 rounded-full transition shadow-md shadow-[#B85D3E]/20 disabled:opacity-50"
               >
                 {isProcessing ? (
                   <>
@@ -371,17 +381,17 @@ export default function Home() {
                   <button
                     onClick={handleExportManuscriptDocx}
                     disabled={isExporting}
-                    className="inline-flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-medium text-xs px-4 py-3 rounded-xl transition"
+                    className="inline-flex items-center gap-1.5 bg-[#FAF8F5] hover:bg-[#F2EDE4] border border-[#E5DDD1] text-[#2D2A26] font-medium text-xs px-4 py-3 rounded-full transition"
                   >
-                    {isExporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-emerald-400" />}
+                    {isExporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-[#5A8264]" />}
                     <span>Export Mirror-Margin DOCX</span>
                   </button>
 
                   <button
                     onClick={() => window.print()}
-                    className="inline-flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-medium text-xs px-4 py-3 rounded-xl transition"
+                    className="inline-flex items-center gap-1.5 bg-[#FAF8F5] hover:bg-[#F2EDE4] border border-[#E5DDD1] text-[#2D2A26] font-medium text-xs px-4 py-3 rounded-full transition"
                   >
-                    <Printer className="w-4 h-4 text-indigo-400" />
+                    <Printer className="w-4 h-4 text-[#B85D3E]" />
                     <span>Print / Save Vector PDF</span>
                   </button>
                 </>
@@ -389,7 +399,7 @@ export default function Home() {
             </div>
 
             {statusMessage && (
-              <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-emerald-400 font-mono">
+              <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-[#5A8264] font-medium font-sans">
                 <CheckCircle2 className="w-4 h-4" />
                 <span>{statusMessage}</span>
               </div>
@@ -399,80 +409,90 @@ export default function Home() {
           <section className="w-full max-w-4xl flex flex-col items-center">
             <div
               ref={docxViewerRef}
-              className="w-full flex flex-col items-center gap-8 py-4 [&_.docx-page-sheet]:shadow-2xl [&_.docx-page-sheet]:rounded-sm [&_.docx-page-sheet]:border [&_.docx-page-sheet]:border-zinc-300 [&_.docx-page-sheet]:bg-white [&_.docx-page-sheet]:text-black"
+              className="w-full flex flex-col items-center gap-8 py-4 [&_.docx-page-sheet]:shadow-xl [&_.docx-page-sheet]:rounded-sm [&_.docx-page-sheet]:border [&_.docx-page-sheet]:border-[#E8E2D8] [&_.docx-page-sheet]:bg-white [&_.docx-page-sheet]:text-black"
             />
           </section>
         </>
       )}
-
-            {/* Planner Generator Tab */}
+            {/* TAB 2: PLANNER GENERATOR */}
       {activeTab === 'planner' && (
-        <section className="w-full max-w-4xl bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 rounded-2xl p-6 shadow-2xl mb-8">
+        <section className="w-full max-w-4xl bg-white border border-[#EFEAE2] rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-8">
           <div className="flex items-center gap-2 mb-6">
-            <Sparkles className="w-4 h-4 text-violet-400" />
-            <h2 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">Algorithmic & AI Infill Generator</h2>
+            <Sparkles className="w-4 h-4 text-[#B85D3E]" />
+            <h2 className="text-xs font-bold text-[#1F1C18] uppercase tracking-wider font-sans">Curated Planner Archetypes</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+          {/* Archetype Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div 
               onClick={() => setPlannerType('daily_focus')}
-              className={`p-4 rounded-xl border cursor-pointer transition ${
+              className={`p-5 rounded-2xl border cursor-pointer transition relative text-left ${
                 plannerType === 'daily_focus' 
-                  ? 'bg-zinc-800/90 border-indigo-500 shadow-md shadow-indigo-500/10' 
-                  : 'bg-zinc-950/60 border-zinc-800 hover:border-zinc-700'
+                  ? 'bg-[#FAF4ED] border-[#B85D3E] shadow-sm' 
+                  : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF]'
               }`}
             >
-              <span className="text-xs font-semibold text-white block mb-1">Daily Focus & Timeblock</span>
-              <p className="text-[11px] text-zinc-400">Priorities, time blocks, and rotating cognitive prompts.</p>
+              <div className="p-2.5 rounded-xl bg-white border border-[#E8E1D6] inline-block mb-3 text-[#B85D3E] shadow-2xl">
+                <Compass className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-bold text-[#1F1C18] block mb-1 font-serif">Daily Focus & Timeblock</span>
+              <p className="text-[11px] text-[#6B6357] leading-relaxed">Priorities, time blocks, and rotating cognitive deep work prompts.</p>
             </div>
 
             <div 
               onClick={() => setPlannerType('meal_grocery')}
-              className={`p-4 rounded-xl border cursor-pointer transition ${
+              className={`p-5 rounded-2xl border cursor-pointer transition relative text-left ${
                 plannerType === 'meal_grocery' 
-                  ? 'bg-zinc-800/90 border-indigo-500 shadow-md shadow-indigo-500/10' 
-                  : 'bg-zinc-950/60 border-zinc-800 hover:border-zinc-700'
+                  ? 'bg-[#FAF4ED] border-[#B85D3E] shadow-sm' 
+                  : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF]'
               }`}
             >
-              <span className="text-xs font-semibold text-white block mb-1">Meal & Kitchen Command</span>
-              <p className="text-[11px] text-zinc-400">Weekly lunch/dinner rotation tables with pantry checklists.</p>
+              <div className="p-2.5 rounded-xl bg-white border border-[#E8E1D6] inline-block mb-3 text-[#B85D3E] shadow-2xl">
+                <Coffee className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-bold text-[#1F1C18] block mb-1 font-serif">Meal & Kitchen Command</span>
+              <p className="text-[11px] text-[#6B6357] leading-relaxed">Weekly lunch & dinner rotation tables with pantry checklists.</p>
             </div>
 
             <div 
               onClick={() => setPlannerType('habit_matrix')}
-              className={`p-4 rounded-xl border cursor-pointer transition ${
+              className={`p-5 rounded-2xl border cursor-pointer transition relative text-left ${
                 plannerType === 'habit_matrix' 
-                  ? 'bg-zinc-800/90 border-indigo-500 shadow-md shadow-indigo-500/10' 
-                  : 'bg-zinc-950/60 border-zinc-800 hover:border-zinc-700'
+                  ? 'bg-[#FAF4ED] border-[#B85D3E] shadow-sm' 
+                  : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF]'
               }`}
             >
-              <span className="text-xs font-semibold text-white block mb-1">Habit Tracking Matrix</span>
-              <p className="text-[11px] text-zinc-400">7-day tracker grids and habit loops with strategic tips.</p>
+              <div className="p-2.5 rounded-xl bg-white border border-[#E8E1D6] inline-block mb-3 text-[#B85D3E] shadow-2xl">
+                <CheckSquare className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-bold text-[#1F1C18] block mb-1 font-serif">Habit Tracking Matrix</span>
+              <p className="text-[11px] text-[#6B6357] leading-relaxed">7-day tracker grids and habit loops with strategic focus rules.</p>
             </div>
           </div>
 
+          {/* Custom Infill Direction */}
           <div className="mb-6">
-            <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider block mb-2">
+            <label className="text-[11px] font-semibold text-[#8C8479] uppercase tracking-wider block mb-2 font-sans">
               Custom Sub-Niche / AI Direction (Optional)
             </label>
             <input
               type="text"
-              placeholder="e.g. Stoic Philosophy, Ketogenic Meal Prep, ADHD Executive Focus"
+              placeholder="e.g. Stoic Philosophy, Mediterranean Diet, ADHD Daily Executive Routine"
               value={customNiche}
               onChange={(e) => setCustomNiche(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 transition"
+              className="w-full bg-[#FAF9F6] border border-[#E8E2D8] rounded-xl px-4 py-2.5 text-xs text-[#2D2A26] placeholder:text-[#9E968B] focus:outline-none focus:border-[#B85D3E] transition"
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-zinc-800/80">
-            <div className="text-xs text-zinc-400 font-mono">
-              Output: <span className="text-white">{plannerDays} Pages</span> • Trim: <span className="text-white">{trimSize}"</span> • Gutter: <span className="text-indigo-400">{gutter}"</span>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-5 border-t border-[#EFEAE2]">
+            <div className="text-xs text-[#6B6357] font-mono">
+              Output: <span className="text-[#1F1C18] font-bold">{plannerDays} Pages</span> • Trim: <span className="text-[#1F1C18] font-bold">{trimSize}"</span> • Gutter: <span className="text-[#B85D3E] font-bold">{gutter}"</span>
             </div>
 
             <button
               onClick={handleRunPlanner}
               disabled={isGeneratingPlanner}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium text-xs px-6 py-3 rounded-xl transition shadow-lg shadow-indigo-600/25 disabled:opacity-50"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md shadow-[#B85D3E]/20 disabled:opacity-50"
             >
               {isGeneratingPlanner ? (
                 <>
@@ -489,7 +509,7 @@ export default function Home() {
           </div>
 
           {statusMessage && (
-            <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-emerald-400 font-mono">
+            <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-[#5A8264] font-medium font-sans">
               <CheckCircle2 className="w-4 h-4" />
               <span>{statusMessage}</span>
             </div>
@@ -499,22 +519,24 @@ export default function Home() {
 
       {/* BYOK Settings Modal */}
       {showKeyModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 bg-[#1F1C18]/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white border border-[#EFEAE2] rounded-3xl p-6 sm:p-7 shadow-2xl relative text-left">
             <button 
               onClick={() => setShowKeyModal(false)}
-              className="absolute top-4 right-4 text-zinc-500 hover:text-white"
+              className="absolute top-5 right-5 text-[#8C8479] hover:text-[#1F1C18]"
             >
               <X className="w-4 h-4" />
             </button>
 
             <div className="flex items-center gap-2.5 mb-3">
-              <Key className="w-5 h-5 text-indigo-400" />
-              <h3 className="text-sm font-bold text-white">Gemini API Key (BYOK)</h3>
+              <div className="p-2 bg-[#FAF4ED] rounded-xl text-[#B85D3E]">
+                <Key className="w-4 h-4" />
+              </div>
+              <h3 className="text-sm font-bold text-[#1F1C18] font-serif">Google Gemini API Key (BYOK)</h3>
             </div>
 
-            <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
-              You get 3 free generations via the curated vault. To unlock unlimited generations with custom dynamic AI prompts, add your free Google Gemini API key.
+            <p className="text-xs text-[#6B6357] mb-4 leading-relaxed font-sans">
+              You receive 3 free generations via the curated vault. To unlock unlimited generations with custom dynamic AI prompts, add your free Google Gemini API key.
             </p>
 
             <input
@@ -522,7 +544,7 @@ export default function Home() {
               placeholder="AIzaSy..."
               value={tempKeyInput}
               onChange={(e) => setTempKeyInput(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 mb-4 font-mono"
+              className="w-full bg-[#FAF9F6] border border-[#E8E2D8] rounded-xl px-3.5 py-2.5 text-xs text-[#2D2A26] placeholder:text-[#9E968B] focus:outline-none focus:border-[#B85D3E] mb-4 font-mono"
             />
 
             <div className="flex items-center justify-end gap-2">
@@ -533,13 +555,13 @@ export default function Home() {
                   localStorage.removeItem('ps_gemini_key');
                   setShowKeyModal(false);
                 }}
-                className="px-3.5 py-2 rounded-xl text-xs text-zinc-400 hover:text-white transition"
+                className="px-3.5 py-2 rounded-full text-xs text-[#8C8479] hover:text-[#1F1C18] transition"
               >
                 Clear Key
               </button>
               <button
                 onClick={saveApiKey}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold transition"
+                className="px-4 py-2 bg-[#B85D3E] hover:bg-[#A35034] text-white rounded-full text-xs font-semibold transition"
               >
                 Save Key
               </button>
@@ -548,10 +570,10 @@ export default function Home() {
         </div>
       )}
 
-      {/* Studio Footer */}
-      <footer className="w-full max-w-5xl border-t border-zinc-900 mt-auto pt-6 text-center text-[11px] text-zinc-600 font-mono">
-        &copy; {new Date().getFullYear()} PUBLISHSTUDIO • Standard POD Specifications • Zero-Server Architecture
+      {/* Atelier Footer */}
+      <footer className="w-full max-w-4xl border-t border-[#EFEAE2] mt-auto pt-6 text-center text-[11px] text-[#9E968B] font-sans">
+        &copy; {new Date().getFullYear()} PUBLISHSTUDIO • Atelier Edition • Zero-Server Architecture
       </footer>
     </main>
   );
-}
+              }

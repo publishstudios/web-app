@@ -71,8 +71,7 @@ export default function Home() {
     '8.5x11': { width: 8.5 * 1440, height: 11 * 1440 },
     '5x8': { width: 5 * 1440, height: 8 * 1440 },
   };
-
-  const handleFileUpload = async (event) => {
+    const handleFileUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -422,51 +421,93 @@ export default function Home() {
             <h2 className="text-xs font-bold text-[#1F1C18] uppercase tracking-wider font-sans">Curated Planner Archetypes</h2>
           </div>
 
-          {/* Archetype Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* Archetype Visual Book Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+            {/* Daily Focus Card */}
             <div 
               onClick={() => setPlannerType('daily_focus')}
-              className={`p-5 rounded-2xl border cursor-pointer transition relative text-left ${
+              className={`p-4 rounded-3xl border cursor-pointer transition-all duration-200 text-left flex flex-col justify-between ${
                 plannerType === 'daily_focus' 
-                  ? 'bg-[#FAF4ED] border-[#B85D3E] shadow-sm' 
-                  : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF]'
+                  ? 'bg-[#FAF4ED] border-[#B85D3E] shadow-md ring-2 ring-[#B85D3E]/20' 
+                  : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF] hover:shadow-sm'
               }`}
             >
-              <div className="p-2.5 rounded-xl bg-white border border-[#E8E1D6] inline-block mb-3 text-[#B85D3E] shadow-2xl">
-                <Compass className="w-4 h-4" />
+              <div className="w-full h-32 rounded-2xl bg-gradient-to-br from-[#F5EDE2] to-[#EAE0D2] border border-[#E0D5C5] p-3 flex flex-col justify-between mb-4 relative overflow-hidden shadow-inner">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-[#8C5E43] bg-white/80 px-2 py-0.5 rounded-full border border-[#DDCFC0]">
+                    90-Day Focus
+                  </span>
+                  <div className="w-2.5 h-7 bg-[#B85D3E] rounded-b-sm shadow-sm opacity-90" />
+                </div>
+                <div className="space-y-1">
+                  <div className="w-12 h-1 bg-[#8C5E43]/40 rounded-full" />
+                  <div className="text-xs font-serif font-bold text-[#3B2D24] tracking-tight">The Focused Day</div>
+                  <div className="w-20 h-1 bg-[#8C5E43]/20 rounded-full" />
+                </div>
               </div>
-              <span className="text-xs font-bold text-[#1F1C18] block mb-1 font-serif">Daily Focus & Timeblock</span>
-              <p className="text-[11px] text-[#6B6357] leading-relaxed">Priorities, time blocks, and rotating cognitive deep work prompts.</p>
+
+              <div>
+                <span className="text-sm font-bold text-[#1F1C18] block mb-1 font-serif">Daily Focus & Timeblock</span>
+                <p className="text-[11px] text-[#6B6357] leading-relaxed">Priorities, time blocks, and rotating cognitive deep work prompts.</p>
+              </div>
             </div>
 
+            {/* Meal & Kitchen Command Card */}
             <div 
               onClick={() => setPlannerType('meal_grocery')}
-              className={`p-5 rounded-2xl border cursor-pointer transition relative text-left ${
+              className={`p-4 rounded-3xl border cursor-pointer transition-all duration-200 text-left flex flex-col justify-between ${
                 plannerType === 'meal_grocery' 
-                  ? 'bg-[#FAF4ED] border-[#B85D3E] shadow-sm' 
-                  : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF]'
+                  ? 'bg-[#FAF4ED] border-[#B85D3E] shadow-md ring-2 ring-[#B85D3E]/20' 
+                  : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF] hover:shadow-sm'
               }`}
             >
-              <div className="p-2.5 rounded-xl bg-white border border-[#E8E1D6] inline-block mb-3 text-[#B85D3E] shadow-2xl">
-                <Coffee className="w-4 h-4" />
+              <div className="w-full h-32 rounded-2xl bg-gradient-to-br from-[#EDF2EC] to-[#DEE8DC] border border-[#CEDBCC] p-3 flex flex-col justify-between mb-4 relative overflow-hidden shadow-inner">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-[#4F7358] bg-white/80 px-2 py-0.5 rounded-full border border-[#CCDBCF]">
+                    Weekly Table
+                  </span>
+                  <div className="w-2.5 h-7 bg-[#5A8264] rounded-b-sm shadow-sm opacity-90" />
+                </div>
+                <div className="space-y-1">
+                  <div className="w-12 h-1 bg-[#4F7358]/40 rounded-full" />
+                  <div className="text-xs font-serif font-bold text-[#233527] tracking-tight">Kitchen & Pantry</div>
+                  <div className="w-20 h-1 bg-[#4F7358]/20 rounded-full" />
+                </div>
               </div>
-              <span className="text-xs font-bold text-[#1F1C18] block mb-1 font-serif">Meal & Kitchen Command</span>
-              <p className="text-[11px] text-[#6B6357] leading-relaxed">Weekly lunch & dinner rotation tables with pantry checklists.</p>
+
+              <div>
+                <span className="text-sm font-bold text-[#1F1C18] block mb-1 font-serif">Meal & Kitchen Command</span>
+                <p className="text-[11px] text-[#6B6357] leading-relaxed">Weekly lunch & dinner rotation tables with pantry checklists.</p>
+              </div>
             </div>
 
+            {/* Habit Tracking Matrix Card */}
             <div 
               onClick={() => setPlannerType('habit_matrix')}
-              className={`p-5 rounded-2xl border cursor-pointer transition relative text-left ${
+              className={`p-4 rounded-3xl border cursor-pointer transition-all duration-200 text-left flex flex-col justify-between ${
                 plannerType === 'habit_matrix' 
-                  ? 'bg-[#FAF4ED] border-[#B85D3E] shadow-sm' 
-                  : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF]'
+                  ? 'bg-[#FAF4ED] border-[#B85D3E] shadow-md ring-2 ring-[#B85D3E]/20' 
+                  : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF] hover:shadow-sm'
               }`}
             >
-              <div className="p-2.5 rounded-xl bg-white border border-[#E8E1D6] inline-block mb-3 text-[#B85D3E] shadow-2xl">
-                <CheckSquare className="w-4 h-4" />
+              <div className="w-full h-32 rounded-2xl bg-gradient-to-br from-[#ECECF4] to-[#DDDDEB] border border-[#D1D1E3] p-3 flex flex-col justify-between mb-4 relative overflow-hidden shadow-inner">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase tracking-wider font-mono font-bold text-[#565384] bg-white/80 px-2 py-0.5 rounded-full border border-[#CAC8DF]">
+                    Cycle Matrix
+                  </span>
+                  <div className="w-2.5 h-7 bg-[#65619A] rounded-b-sm shadow-sm opacity-90" />
+                </div>
+                <div className="space-y-1">
+                  <div className="w-12 h-1 bg-[#565384]/40 rounded-full" />
+                  <div className="text-xs font-serif font-bold text-[#27253D] tracking-tight">Atomic Rituals</div>
+                  <div className="w-20 h-1 bg-[#565384]/20 rounded-full" />
+                </div>
               </div>
-              <span className="text-xs font-bold text-[#1F1C18] block mb-1 font-serif">Habit Tracking Matrix</span>
-              <p className="text-[11px] text-[#6B6357] leading-relaxed">7-day tracker grids and habit loops with strategic focus rules.</p>
+
+              <div>
+                <span className="text-sm font-bold text-[#1F1C18] block mb-1 font-serif">Habit Tracking Matrix</span>
+                <p className="text-[11px] text-[#6B6357] leading-relaxed">7-day tracker grids and habit loops with strategic focus rules.</p>
+              </div>
             </div>
           </div>
 
@@ -576,4 +617,4 @@ export default function Home() {
       </footer>
     </main>
   );
-              }
+}

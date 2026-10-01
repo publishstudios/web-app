@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Upload, BookOpen, Layers, Download, RefreshCw, 
   CheckCircle2, Sparkles, Printer, Sliders, Key, X, 
-  Award, Sun, Moon, Crown
+  Award, Sun, Moon, Crown, Eye
 } from 'lucide-react';
 import { 
   Document, Packer, Paragraph, TextRun, HeadingLevel, 
@@ -349,7 +349,6 @@ export default function Home() {
       <header className={`w-full max-w-4xl flex flex-col gap-3.5 border-b pb-5 mb-6 sm:mb-8 ${
         isDarkMode ? 'border-[#262429]' : 'border-[#EFEAE2]'
       }`}>
-        {/* Row 1: Brand (Left) + Tools/Admin (Right) */}
         <div className="w-full flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className={`p-2 sm:p-2.5 rounded-2xl border shadow-sm shrink-0 ${
@@ -369,7 +368,7 @@ export default function Home() {
                     ? 'bg-[#2A1D1A] text-[#E07A5F] border-[#4A2D25]' 
                     : 'bg-[#FAF3EC] text-[#B85D3E] border-[#E9DFD3]'
                 }`}>
-                  v3.8
+                  v3.9
                 </span>
               </div>
               <span className={`text-[10px] sm:text-[11px] font-sans block truncate ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'}`}>
@@ -379,7 +378,6 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
               className={`p-2 rounded-full border transition shadow-sm ${
@@ -392,7 +390,6 @@ export default function Home() {
               {isDarkMode ? <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             </button>
 
-            {/* Admin / BYOK / Credits Pill */}
             <button
               onClick={() => setShowKeyModal(true)}
               className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border text-[11px] sm:text-xs transition shadow-sm font-sans ${
@@ -423,7 +420,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Row 2: Mode Switcher (Full width on mobile, right-aligned on desktop) */}
         <div className="w-full flex items-center justify-center sm:justify-end">
           <div className={`w-full sm:w-auto grid grid-cols-2 sm:flex items-center p-1 rounded-full border ${
             isDarkMode ? 'bg-[#1A181E] border-[#2B2833]' : 'bg-[#F1ECE4] border-[#E5DED4]'
@@ -651,6 +647,112 @@ export default function Home() {
             )}
           </section>
 
+          {/* INTERACTIVE BOOK CRAFT EMPTY STATE: Fills empty mobile viewport */}
+          {!hasRendered && (
+            <section className={`w-full max-w-4xl border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-8 transition ${
+              isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
+            }`}>
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#EFEAE2] dark:border-[#262429]">
+                <div className="flex items-center gap-2">
+                  <Eye className={`w-4 h-4 ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`} />
+                  <span className={`text-xs font-bold uppercase tracking-wider font-sans ${isDarkMode ? 'text-zinc-200' : 'text-[#1F1C18]'}`}>
+                    Book Craft Spread Preview (Interactive Mockup)
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-[#8E8B92]">
+                  {trimSize}" • {gutter}" Gutter
+                </span>
+              </div>
+
+              {/* Tactile Side-by-Side Open Book Mockup */}
+              <div className="relative w-full rounded-2xl bg-[#EBE5DC] dark:bg-[#0E0D10] p-3 sm:p-6 shadow-inner flex flex-col items-center">
+                <div className="w-full max-w-2xl grid grid-cols-2 gap-1 sm:gap-2 shadow-2xl rounded-sm overflow-hidden border border-[#D5CDBD] dark:border-[#282630]">
+                  
+                  {/* VERSO PAGE (Left Page / Even) */}
+                  <div className="bg-[#FAF8F5] text-[#2D2A26] p-4 sm:p-7 flex flex-col justify-between aspect-[1/1.42] relative select-none border-r border-[#E0D7C8]">
+                    <div className="absolute right-0 top-0 bottom-0 w-2.5 bg-gradient-to-l from-black/10 to-transparent pointer-events-none" />
+
+                    {/* Verso Header: Author Name */}
+                    <div className="text-center pb-2 border-b border-[#EADFD8]">
+                      <span className="text-[9px] sm:text-[11px] font-serif uppercase tracking-widest text-[#7A7570] block truncate">
+                        {authorName || 'AUTHOR NAME'}
+                      </span>
+                    </div>
+
+                    {/* Verso Text Content Lines */}
+                    <div className="space-y-2 sm:space-y-2.5 my-auto">
+                      <div className="h-1.5 bg-[#D8CFBF] rounded-full w-full opacity-80" />
+                      <div className="h-1.5 bg-[#D8CFBF] rounded-full w-11/12 opacity-80" />
+                      <div className="h-1.5 bg-[#D8CFBF] rounded-full w-full opacity-80" />
+                      <div className="h-1.5 bg-[#D8CFBF] rounded-full w-4/5 opacity-70" />
+                      <div className="h-1.5 bg-[#D8CFBF] rounded-full w-full opacity-80" />
+                      <div className="h-1.5 bg-[#D8CFBF] rounded-full w-10/12 opacity-75" />
+                    </div>
+
+                    {/* Verso Mirrored Folio (Left-Aligned) */}
+                    <div className="pt-2 border-t border-[#EADFD8] text-left">
+                      <span className="text-[9px] sm:text-[11px] font-serif font-bold text-[#524E49]">
+                        2
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* RECTO PAGE (Right Page / Odd) */}
+                  <div className="bg-[#FAF8F5] text-[#2D2A26] p-4 sm:p-7 flex flex-col justify-between aspect-[1/1.42] relative select-none">
+                    <div className="absolute left-0 top-0 bottom-0 w-2.5 bg-gradient-to-r from-black/10 to-transparent pointer-events-none" />
+
+                    {/* Recto Header: Book Title */}
+                    <div className="text-center pb-2 border-b border-[#EADFD8]">
+                      <span className="text-[9px] sm:text-[11px] font-serif uppercase tracking-widest text-[#7A7570] block truncate">
+                        {bookTitle || 'BOOK TITLE'}
+                      </span>
+                    </div>
+                                        {/* Chapter Heading + Editorial Drop Cap */}
+                    <div className="my-auto">
+                      <div className="text-center mb-3 sm:mb-4">
+                        <span className="text-[8px] sm:text-[10px] uppercase font-sans tracking-widest text-[#B85D3E] font-bold block">
+                          Chapter One
+                        </span>
+                        <span className="text-[11px] sm:text-sm font-serif font-bold text-[#1F1C18]">
+                          The Genesis
+                        </span>
+                      </div>
+
+                      <div className="flex gap-2 items-start mb-2">
+                        <span className="text-2xl sm:text-4xl font-serif leading-none font-bold text-[#1F1C18]">
+                          O
+                        </span>
+                        <div className="space-y-1.5 sm:space-y-2 flex-1 pt-0.5">
+                          <div className="h-1.5 bg-[#D8CFBF] rounded-full w-full opacity-80" />
+                          <div className="h-1.5 bg-[#D8CFBF] rounded-full w-full opacity-80" />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 sm:space-y-2.5">
+                        <div className="h-1.5 bg-[#D8CFBF] rounded-full w-full opacity-80" />
+                        <div className="h-1.5 bg-[#D8CFBF] rounded-full w-10/12 opacity-75" />
+                        <div className="h-1.5 bg-[#D8CFBF] rounded-full w-11/12 opacity-80" />
+                      </div>
+                    </div>
+
+                    {/* Recto Mirrored Folio (Right-Aligned) */}
+                    <div className="pt-2 border-t border-[#EADFD8] text-right">
+                      <span className="text-[9px] sm:text-[11px] font-serif font-bold text-[#524E49]">
+                        3
+                      </span>
+                    </div>
+                  </div>
+
+                </div>
+
+                <p className="mt-4 text-[10px] sm:text-[11px] font-sans text-center text-[#7A7570] dark:text-[#8E8B92]">
+                  Live POD layout rendering: {gutter}" binding gutter calculated for {pageCount} pages.
+                </p>
+              </div>
+            </section>
+          )}
+
+          {/* DOCX Native Sheets Viewer (Rendered on Upload) */}
           <section className="w-full max-w-4xl flex flex-col items-center">
             <div
               ref={docxViewerRef}
@@ -920,5 +1022,5 @@ export default function Home() {
       </footer>
     </main>
   );
-              }
-                
+}
+      

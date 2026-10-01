@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Upload, BookOpen, Layers, Download, RefreshCw, 
   CheckCircle2, Sparkles, Printer, Sliders, Key, X, 
-  Award, Sun, Moon, CheckSquare, Coffee, Compass
+  Award, Sun, Moon, ShieldCheck, Crown
 } from 'lucide-react';
 import { 
   Document, Packer, Paragraph, TextRun, HeadingLevel, 
@@ -11,6 +11,16 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { generatePlannerDocx } from './plannerEngine';
+
+// Secure SHA-256 Hash of "StudioMasterAdmin"
+const ADMIN_DIGEST_HASH = 'bf447475f3a0a382c4ae72bbec2c7a5223abf12f205c066e4a2bc1e0691d1ea1';
+
+async function computeSHA256(message) {
+  const msgBuffer = new TextEncoder().encode(message.trim());
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('manuscript');
@@ -21,6 +31,8 @@ export default function Home() {
   const [bookTitle, setBookTitle] = useState('Title of the Work');
   const [authorName, setAuthorName] = useState('Author Name');
 
+  // Authorization & Credits
+  const [isAdmin, setIsAdmin] = useState(false);
   const [credits, setCredits] = useState(3);
   const [apiKey, setApiKey] = useState('');
   const [showKeyModal, setShowKeyModal] = useState(false);
@@ -42,9 +54,14 @@ export default function Home() {
   const docxViewerRef = useRef(null);
 
   useEffect(() => {
+    const savedAdmin = localStorage.getItem('ps_studio_admin_token');
     const savedCredits = localStorage.getItem('ps_credits');
     const savedKey = localStorage.getItem('ps_gemini_key');
     const savedTheme = localStorage.getItem('ps_theme');
+
+    if (savedAdmin === 'unlimited_studio_verified') {
+      setIsAdmin(true);
+    }
     if (savedCredits !== null) setCredits(Number(savedCredits));
     if (savedKey) {
       setApiKey(savedKey);
@@ -59,9 +76,23 @@ export default function Home() {
     localStorage.setItem('ps_theme', nextTheme ? 'dark' : 'light');
   };
 
-  const saveApiKey = () => {
-    setApiKey(tempKeyInput.trim());
-    localStorage.setItem('ps_gemini_key', tempKeyInput.trim());
+  const handleSaveSecret = async () => {
+    const input = tempKeyInput.trim();
+    if (!input) return;
+
+    const hash = await computeSHA256(input);
+
+    if (hash === ADMIN_DIGEST_HASH) {
+      setIsAdmin(true);
+      localStorage.setItem('ps_studio_admin_token', 'unlimited_studio_verified');
+      setStatusMessage('Admin master access unlocked: Unlimited generations enabled.');
+      setShowKeyModal(false);
+      return;
+    }
+
+    // Otherwise standard Gemini BYOK key
+    setApiKey(input);
+    localStorage.setItem('ps_gemini_key', input);
     setShowKeyModal(false);
   };
 
@@ -166,7 +197,7 @@ export default function Home() {
         );
       });
 
-      // Professional Recto/Verso Running Heads and Footers
+      // Professional Recto/Verso Running Heads
       const headerEven = new Header({
         children: [
           new Paragraph({
@@ -250,7 +281,7 @@ export default function Home() {
                 mirrorMargins: true,
               },
             },
-            titlePage: true, // First page suppresses headers/numbers for title/front-matter
+            titlePage: true, // Suppresses headers & page numbers on page 1
           },
           headers: {
             default: headerOdd,
@@ -277,7 +308,8 @@ export default function Home() {
   };
 
   const handleRunPlanner = async () => {
-    if (credits <= 0 && !apiKey) {
+    // Admin Unlimited Check: Bypasses credit lock completely
+    if (!isAdmin && credits <= 0 && !apiKey) {
       setShowKeyModal(true);
       return;
     }
@@ -297,7 +329,8 @@ export default function Home() {
         apiKey
       });
 
-      if (!apiKey && credits > 0) {
+      // Deduct credits ONLY if user is not Admin and not using their own API key
+      if (!isAdmin && !apiKey && credits > 0) {
         const nextCredits = credits - 1;
         setCredits(nextCredits);
         localStorage.setItem('ps_credits', nextCredits.toString());
@@ -311,7 +344,7 @@ export default function Home() {
       setIsGeneratingPlanner(false);
     }
   };
-  return (
+      return (
     <main className={`min-h-screen flex flex-col items-center px-4 py-8 transition-colors duration-300 ${
       isDarkMode 
         ? 'bg-[#121113] text-[#E8E6E3] selection:bg-[#3E2B25] selection:text-[#E07A5F]' 
@@ -339,7 +372,7 @@ export default function Home() {
                   ? 'bg-[#2A1D1A] text-[#E07A5F] border-[#4A2D25]' 
                   : 'bg-[#FAF3EC] text-[#B85D3E] border-[#E9DFD3]'
               }`}>
-                Atelier 3.6
+                Atelier 3.7
               </span>
             </div>
             <span className={`text-[11px] font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'}`}>
@@ -362,7 +395,7 @@ export default function Home() {
             {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
-          {/* Credits / BYOK Pill */}
+          {/* Admin / BYOK / Credits Pill */}
           <button
             onClick={() => setShowKeyModal(true)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs transition shadow-sm font-sans ${
@@ -371,7 +404,12 @@ export default function Home() {
                 : 'bg-white border-[#E8E1D7] hover:bg-[#FAF7F2]'
             }`}
           >
-            {apiKey ? (
+            {isAdmin ? (
+              <>
+                <Crown className="w-3.5 h-3.5 text-[#B85D3E]" />
+                <span className="text-[#B85D3E] font-bold">Studio Admin</span>
+              </>
+            ) : apiKey ? (
               <>
                 <Key className="w-3.5 h-3.5 text-[#5A8264]" />
                 <span className="text-[#5A8264] font-medium">BYOK Active</span>
@@ -622,7 +660,7 @@ export default function Home() {
           </section>
         </>
       )}
-              {/* TAB 2: PLANNER GENERATOR */}
+                {/* TAB 2: PLANNER GENERATOR */}
       {activeTab === 'planner' && (
         <section className={`w-full max-w-4xl border rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-8 transition ${
           isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
@@ -809,7 +847,7 @@ export default function Home() {
         </section>
       )}
 
-      {/* BYOK Settings Modal */}
+      {/* Access Settings Modal (BYOK & Master Secret) */}
       {showKeyModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className={`w-full max-w-md border rounded-3xl p-6 sm:p-7 shadow-2xl relative text-left transition ${
@@ -824,20 +862,22 @@ export default function Home() {
 
             <div className="flex items-center gap-2.5 mb-3">
               <div className={`p-2 rounded-xl ${isDarkMode ? 'bg-[#2A1D1A] text-[#E07A5F]' : 'bg-[#FAF4ED] text-[#B85D3E]'}`}>
-                <Key className="w-4 h-4" />
+                {isAdmin ? <Crown className="w-4 h-4" /> : <Key className="w-4 h-4" />}
               </div>
               <h3 className={`text-sm font-bold font-serif ${isDarkMode ? 'text-white' : 'text-[#1F1C18]'}`}>
-                Google Gemini API Key (BYOK)
+                {isAdmin ? 'Studio Admin Active' : 'Access Authorization (BYOK)'}
               </h3>
             </div>
 
             <p className={`text-xs mb-4 leading-relaxed font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#6B6357]'}`}>
-              You receive 3 free generations via the curated vault. To unlock unlimited generations with custom dynamic AI prompts, add your free Google Gemini API key.
+              {isAdmin 
+                ? 'Your Master Admin privileges are verified. You have unrestricted, unlimited generation capacity across all tools.'
+                : 'Enter your Google Gemini API key for dynamic generation, or enter your master administrative credentials to unlock unlimited studio privileges.'}
             </p>
 
             <input
               type="password"
-              placeholder="AIzaSy..."
+              placeholder={isAdmin ? '••••••••••••••••' : 'AIzaSy... or Secret Key'}
               value={tempKeyInput}
               onChange={(e) => setTempKeyInput(e.target.value)}
               className={`w-full border rounded-xl px-3.5 py-2.5 text-xs mb-4 font-mono transition ${
@@ -852,20 +892,22 @@ export default function Home() {
                 onClick={() => {
                   setApiKey('');
                   setTempKeyInput('');
+                  setIsAdmin(false);
                   localStorage.removeItem('ps_gemini_key');
+                  localStorage.removeItem('ps_studio_admin_token');
                   setShowKeyModal(false);
                 }}
                 className={`px-3.5 py-2 rounded-full text-xs transition ${
                   isDarkMode ? 'text-[#8E8B92] hover:text-white' : 'text-[#8C8479] hover:text-[#1F1C18]'
                 }`}
               >
-                Clear Key
+                Reset Access
               </button>
               <button
-                onClick={saveApiKey}
+                onClick={handleSaveSecret}
                 className="px-4 py-2 bg-[#B85D3E] hover:bg-[#A35034] text-white rounded-full text-xs font-semibold transition"
               >
-                Save Key
+                Authorize
               </button>
             </div>
           </div>
@@ -880,4 +922,5 @@ export default function Home() {
       </footer>
     </main>
   );
-            }
+        }
+        

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { 
   Document, Packer, Paragraph, TextRun, HeadingLevel, 
-  PageBreak, AlignmentType 
+  PageBreak, AlignmentType, Header, Footer, PageNumber
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { generatePlannerDocx } from './plannerEngine';
@@ -17,6 +17,9 @@ export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [trimSize, setTrimSize] = useState('6x9');
   const [pageCount, setPageCount] = useState(120);
+
+  const [bookTitle, setBookTitle] = useState('Title of the Work');
+  const [authorName, setAuthorName] = useState('Author Name');
 
   const [credits, setCredits] = useState(3);
   const [apiKey, setApiKey] = useState('');
@@ -84,7 +87,11 @@ export default function Home() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const baseCleanTitle = file.name.replace(/\.docx$/i, '').replace(/[_-]/g, ' ');
     setFileName(file.name);
+    if (!bookTitle || bookTitle === 'Title of the Work') {
+      setBookTitle(baseCleanTitle);
+    }
     setIsProcessing(true);
     setHasRendered(false);
     setStatusMessage('');
@@ -127,7 +134,7 @@ export default function Home() {
     try {
       const selectedTrim = trimDimensionsTwips[trimSize] || trimDimensionsTwips['6x9'];
       const paragraphs = [];
-      const isBreakMarker = (t) => /^(dedication|contents|table of contents|acknowledgments|disclaimer|introduction|chapter\s+\d+|part\s+\d+)/i.test(t);
+      const isBreakMarker = (t) => /^(dedication|contents|table of contents|acknowledgments|disclaimer|introduction|prologue|chapter\s+\d+|part\s+\d+)/i.test(t);
 
       rawTextLines.forEach((line, index) => {
         const isHeading = isBreakMarker(line);
@@ -145,20 +152,92 @@ export default function Home() {
                 font: 'Georgia',
                 size: isHeading ? 28 : 22,
                 bold: isHeading,
+                color: isHeading ? '1F1C18' : '2D2A26',
               }),
             ],
             heading: isHeading ? HeadingLevel.HEADING_1 : undefined,
             alignment: isHeading ? AlignmentType.CENTER : AlignmentType.LEFT,
             spacing: {
               line: 340,
-              before: isHeading ? 360 : 0,
-              after: isHeading ? 240 : 120,
+              before: isHeading ? 480 : 0,
+              after: isHeading ? 280 : 120,
             },
           })
         );
       });
 
+      // Professional Recto/Verso Running Heads and Footers
+      const headerEven = new Header({
+        children: [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: (authorName || 'AUTHOR').toUpperCase(),
+                font: 'Georgia',
+                size: 16,
+                color: '7A7570',
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 180 },
+          }),
+        ],
+      });
+
+      const headerOdd = new Header({
+        children: [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: (bookTitle || 'TITLE').toUpperCase(),
+                font: 'Georgia',
+                size: 16,
+                color: '7A7570',
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 180 },
+          }),
+        ],
+      });
+
+      // Mirrored Outer Page Numbers (Even on Left, Odd on Right)
+      const footerEven = new Footer({
+        children: [
+          new Paragraph({
+            children: [
+              new TextRun({
+                children: [PageNumber.CURRENT],
+                font: 'Georgia',
+                size: 18,
+                color: '524E49',
+              }),
+            ],
+            alignment: AlignmentType.LEFT,
+            spacing: { before: 180 },
+          }),
+        ],
+      });
+
+      const footerOdd = new Footer({
+        children: [
+          new Paragraph({
+            children: [
+              new TextRun({
+                children: [PageNumber.CURRENT],
+                font: 'Georgia',
+                size: 18,
+                color: '524E49',
+              }),
+            ],
+            alignment: AlignmentType.RIGHT,
+            spacing: { before: 180 },
+          }),
+        ],
+      });
+
       const doc = new Document({
+        evenAndOddHeaders: true,
         sections: [{
           properties: {
             page: {
@@ -171,6 +250,15 @@ export default function Home() {
                 mirrorMargins: true,
               },
             },
+            titlePage: true, // First page suppresses headers/numbers for title/front-matter
+          },
+          headers: {
+            default: headerOdd,
+            even: headerEven,
+          },
+          footers: {
+            default: footerOdd,
+            even: footerEven,
           },
           children: paragraphs,
         }],
@@ -179,7 +267,7 @@ export default function Home() {
       const blob = await Packer.toBlob(doc);
       const cleanBase = fileName ? fileName.replace(/\.docx$/i, '') : 'Manuscript';
       saveAs(blob, `${cleanBase}_Formatted_${trimSize}.docx`);
-      setStatusMessage('Manuscript successfully exported with mirror margins.');
+      setStatusMessage('Manuscript exported with mirror margins, running heads & mirrored folios.');
     } catch (err) {
       console.error(err);
       alert('Error creating DOCX file.');
@@ -223,7 +311,7 @@ export default function Home() {
       setIsGeneratingPlanner(false);
     }
   };
-    return (
+  return (
     <main className={`min-h-screen flex flex-col items-center px-4 py-8 transition-colors duration-300 ${
       isDarkMode 
         ? 'bg-[#121113] text-[#E8E6E3] selection:bg-[#3E2B25] selection:text-[#E07A5F]' 
@@ -251,7 +339,7 @@ export default function Home() {
                   ? 'bg-[#2A1D1A] text-[#E07A5F] border-[#4A2D25]' 
                   : 'bg-[#FAF3EC] text-[#B85D3E] border-[#E9DFD3]'
               }`}>
-                Atelier 3.5
+                Atelier 3.6
               </span>
             </div>
             <span className={`text-[11px] font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'}`}>
@@ -417,9 +505,50 @@ export default function Home() {
       {/* TAB 1: TYPESET STUDIO */}
       {activeTab === 'manuscript' && (
         <>
-          <section className={`w-full max-w-4xl border rounded-3xl p-6 sm:p-8 text-center shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-8 transition ${
+          <section className={`w-full max-w-4xl border rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-8 transition ${
             isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
           }`}>
+            {/* Running Header Metadata Fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className={`text-[11px] font-semibold uppercase tracking-wider block mb-2 font-sans ${
+                  isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'
+                }`}>
+                  Book Title (Odd / Recto Header)
+                </label>
+                <input
+                  type="text"
+                  value={bookTitle}
+                  onChange={(e) => setBookTitle(e.target.value)}
+                  className={`w-full border rounded-xl px-3.5 py-2 text-xs font-serif focus:outline-none transition ${
+                    isDarkMode 
+                      ? 'bg-[#121114] border-[#2D2A35] text-zinc-100 focus:border-[#E07A5F]' 
+                      : 'bg-[#FAF9F6] border-[#E8E2D8] text-[#2D2A26] focus:border-[#B85D3E]'
+                  }`}
+                  placeholder="Enter Title"
+                />
+              </div>
+
+              <div>
+                <label className={`text-[11px] font-semibold uppercase tracking-wider block mb-2 font-sans ${
+                  isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'
+                }`}>
+                  Author Name (Even / Verso Header)
+                </label>
+                <input
+                  type="text"
+                  value={authorName}
+                  onChange={(e) => setAuthorName(e.target.value)}
+                  className={`w-full border rounded-xl px-3.5 py-2 text-xs font-serif focus:outline-none transition ${
+                    isDarkMode 
+                      ? 'bg-[#121114] border-[#2D2A35] text-zinc-100 focus:border-[#E07A5F]' 
+                      : 'bg-[#FAF9F6] border-[#E8E2D8] text-[#2D2A26] focus:border-[#B85D3E]'
+                  }`}
+                  placeholder="Enter Author"
+                />
+              </div>
+            </div>
+
             <input
               ref={fileInputRef}
               type="file"
@@ -459,7 +588,7 @@ export default function Home() {
                     }`}
                   >
                     {isExporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-[#5A8264]" />}
-                    <span>Export Mirror-Margin DOCX</span>
+                    <span>Export Formatted DOCX</span>
                   </button>
 
                   <button
@@ -493,7 +622,7 @@ export default function Home() {
           </section>
         </>
       )}
-            {/* TAB 2: PLANNER GENERATOR */}
+              {/* TAB 2: PLANNER GENERATOR */}
       {activeTab === 'planner' && (
         <section className={`w-full max-w-4xl border rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-8 transition ${
           isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
@@ -751,6 +880,4 @@ export default function Home() {
       </footer>
     </main>
   );
-}
-
-                             
+            }

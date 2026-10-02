@@ -6,7 +6,7 @@ import {
   Award, Sun, Moon, Crown, Eye, Maximize2, ShieldCheck,
   Plus, Copy, Trash2, CheckSquare, Square, Grid, Image as ImageIcon,
   Compass, HelpCircle, Check, AlertTriangle, ArrowRight, ArrowLeft,
-  ChevronRight, Settings2, FileText, CheckCircle
+  ChevronRight, Settings2, FileText, CheckCircle, AlertCircle, List
 } from 'lucide-react';
 import { 
   Document, Packer, Paragraph, TextRun, HeadingLevel, 
@@ -24,6 +24,7 @@ import {
   calculateSpineWidth, 
   calculateFullWrapDimensions 
 } from './productionMath';
+import { inspectManuscriptDOM } from './manuscriptInspector';
 
 // Secure SHA-256 Hash of "StudioMasterAdmin"
 const ADMIN_DIGEST_HASH = 'bf447475f3a0a382c4ae72bbec2c7a5223abf12f205c066e4a2bc1e0691d1ea1';
@@ -68,10 +69,11 @@ export default function Home() {
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [tempKeyInput, setTempKeyInput] = useState('');
 
-  // Step 2: Interior Manuscript State
+  // Step 2: Interior Manuscript & Analysis State
   const [interiorSubMode, setInteriorSubMode] = useState('typeset'); // 'typeset' | 'visual_strip' | 'planner_docx'
   const [fileName, setFileName] = useState('');
   const [rawTextLines, setRawTextLines] = useState([]);
+  const [manuscriptAnalysis, setManuscriptAnalysis] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [hasRendered, setHasRendered] = useState(false);
@@ -134,7 +136,6 @@ export default function Home() {
     setShowKeyModal(false);
   };
 
-  // Synchronize Archetype Selections
   const handleSelectArchetype = (archKey) => {
     const preset = BOOK_ARCHETYPES[archKey];
     if (!preset) return;
@@ -147,7 +148,6 @@ export default function Home() {
     setCustomMargins({ ...preset.margins });
   };
 
-  // Dynamic Physical Math (Calculated via productionMath.js)
   const activeEffectivePages = interiorSubMode === 'visual_strip' && visualPages.length > 0 
     ? visualPages.length 
     : (interiorSubMode === 'planner_docx' ? plannerDays : pageCount);
@@ -369,6 +369,7 @@ export default function Home() {
     }
     setIsProcessing(true);
     setHasRendered(false);
+    setManuscriptAnalysis(null);
     setStatusMessage('');
 
     try {
@@ -391,6 +392,10 @@ export default function Home() {
         const extractedText = docxViewerRef.current.innerText || '';
         const lines = extractedText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
         setRawTextLines(lines);
+
+        // Run Client-Side Structural Inspection
+        const audit = inspectManuscriptDOM(docxViewerRef.current, lines);
+        setManuscriptAnalysis(audit);
         setHasRendered(true);
       }
     } catch (err) {
@@ -573,7 +578,7 @@ export default function Home() {
       setIsGeneratingPlanner(false);
     }
   };
-       return (
+    return (
     <main className={`min-h-screen w-full overflow-x-hidden flex flex-col items-center px-3.5 sm:px-6 py-6 sm:py-8 transition-colors duration-300 ${
       isDarkMode 
         ? 'bg-[#121113] text-[#E8E6E3] selection:bg-[#3E2B25] selection:text-[#E07A5F]' 
@@ -705,7 +710,6 @@ export default function Home() {
       {/* STEP 1: BOOK SETUP ("What are you creating?") */}
       {currentStep === 1 && (
         <div className="w-full max-w-4xl flex flex-col gap-6">
-          {/* Intake Guidance Card */}
           <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
             isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
           }`}>
@@ -723,7 +727,6 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Archetype Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
               {Object.entries(BOOK_ARCHETYPES).map(([key, arch]) => {
                 const isSelected = selectedArchetype === key;
@@ -758,7 +761,6 @@ export default function Home() {
               })}
             </div>
 
-            {/* Educational Context Pill */}
             <div className={`p-3.5 rounded-2xl border text-xs flex items-start gap-2.5 ${
               isDarkMode ? 'bg-[#141317] border-[#2A2733] text-zinc-300' : 'bg-[#FAF8F5] border-[#EAE3D8] text-[#524E49]'
             }`}>
@@ -773,7 +775,7 @@ export default function Home() {
               </div>
             </div>
           </section>
-                    {/* Calibrated Manufacturing Specifications Card */}
+
           <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
             isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
           }`}>
@@ -847,7 +849,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Calculated Margins Readout */}
             <div className={`border rounded-2xl p-4 grid grid-cols-3 gap-2 text-center mb-4 ${
               isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'
             }`}>
@@ -877,7 +878,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Advanced Direct Overrides Drawer */}
             {experienceMode === 'advanced' && (
               <div className="pt-4 border-t border-black/5 dark:border-white/5 grid grid-cols-3 gap-3">
                 <div>
@@ -914,7 +914,6 @@ export default function Home() {
             )}
           </section>
 
-          {/* Forward Navigation Action */}
           <div className="flex items-center justify-between pt-2">
             <span className="text-[11px] text-[#8C8479] font-sans">
               Designed around common print-on-demand publishing specifications.
@@ -929,6 +928,7 @@ export default function Home() {
           </div>
         </div>
       )}
+
             {/* STEP 2: INTERIOR FORMATTING & MANUSCRIPT */}
       {currentStep === 2 && (
         <div className="w-full max-w-4xl flex flex-col gap-6">
@@ -940,7 +940,6 @@ export default function Home() {
               </h2>
             </div>
 
-            {/* Sub-Format Switcher */}
             <div className={`p-1 rounded-full border flex items-center text-xs ${
               isDarkMode ? 'bg-[#121114] border-[#282630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'
             }`}>
@@ -967,66 +966,145 @@ export default function Home() {
 
           {/* Sub-Mode 1: Manuscript Typesetter */}
           {interiorSubMode === 'typeset' && (
-            <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
-              isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
-            }`}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-                <div>
-                  <label className="text-[10px] font-semibold uppercase tracking-wider block mb-1.5 text-[#8C8479]">
-                    Book Title (Recto Header)
-                  </label>
-                  <input
-                    type="text"
-                    value={bookTitle}
-                    onChange={(e) => setBookTitle(e.target.value)}
-                    className="w-full border rounded-xl px-3.5 py-2 text-xs font-serif bg-transparent"
-                    placeholder="Enter Book Title"
-                  />
+            <div className="space-y-6">
+              <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
+                isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
+              }`}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+                  <div>
+                    <label className="text-[10px] font-semibold uppercase tracking-wider block mb-1.5 text-[#8C8479]">
+                      Book Title (Recto Header)
+                    </label>
+                    <input
+                      type="text"
+                      value={bookTitle}
+                      onChange={(e) => setBookTitle(e.target.value)}
+                      className="w-full border rounded-xl px-3.5 py-2 text-xs font-serif bg-transparent"
+                      placeholder="Enter Book Title"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold uppercase tracking-wider block mb-1.5 text-[#8C8479]">
+                      Author Name (Verso Header)
+                    </label>
+                    <input
+                      type="text"
+                      value={authorName}
+                      onChange={(e) => setAuthorName(e.target.value)}
+                      className="w-full border rounded-xl px-3.5 py-2 text-xs font-serif bg-transparent"
+                      placeholder="Enter Author Name"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-[10px] font-semibold uppercase tracking-wider block mb-1.5 text-[#8C8479]">
-                    Author Name (Verso Header)
-                  </label>
-                  <input
-                    type="text"
-                    value={authorName}
-                    onChange={(e) => setAuthorName(e.target.value)}
-                    className="w-full border rounded-xl px-3.5 py-2 text-xs font-serif bg-transparent"
-                    placeholder="Enter Author Name"
-                  />
-                </div>
-              </div>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".docx"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".docx"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isProcessing}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-5 py-3 rounded-full transition shadow-md shadow-[#B85D3E]/20"
-                >
-                  {isProcessing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                  <span>{fileName ? `Uploaded: ${fileName}` : 'Upload DOCX Manuscript'}</span>
-                </button>
-
-                {hasRendered && (
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                   <button
-                    onClick={handleExportManuscriptDocx}
-                    disabled={isExporting}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 border font-medium text-xs px-4 py-3 rounded-full transition bg-transparent"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isProcessing}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-5 py-3 rounded-full transition shadow-md shadow-[#B85D3E]/20"
                   >
-                    {isExporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-[#5A8264]" />}
-                    <span>Export Formatted DOCX</span>
+                    {isProcessing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    <span>{fileName ? `Uploaded: ${fileName}` : 'Upload DOCX Manuscript'}</span>
                   </button>
-                )}
-              </div>
-            </section>
+
+                  {hasRendered && (
+                    <button
+                      onClick={handleExportManuscriptDocx}
+                      disabled={isExporting}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 border font-medium text-xs px-4 py-3 rounded-full transition bg-transparent"
+                    >
+                      {isExporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-[#5A8264]" />}
+                      <span>Export Formatted DOCX</span>
+                    </button>
+                  )}
+                </div>
+              </section>
+
+              {/* CLIENT-SIDE MANUSCRIPT INSPECTION & ANOMALY DASHBOARD */}
+              {manuscriptAnalysis && (
+                <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
+                  isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
+                }`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#B85D3E]" />
+                      <h3 className={`text-xs font-bold uppercase tracking-wider font-sans ${isDarkMode ? 'text-zinc-200' : 'text-[#1F1C18]'}`}>
+                        Manuscript Structural Audit
+                      </h3>
+                    </div>
+                    <span className="text-[10px] font-mono text-[#5A8264] bg-[#F0F5F1] dark:bg-[#1E2721] px-2.5 py-0.5 rounded-full border border-[#D5E3D8] dark:border-[#2D4534]">
+                      Zero-Server Verified
+                    </span>
+                  </div>
+
+                  {/* Document Metrics Strip */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-5">
+                    <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
+                      <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Word Count</span>
+                      <span className="text-xs sm:text-sm font-bold font-mono">{manuscriptAnalysis.wordCount.toLocaleString()}</span>
+                    </div>
+                    <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
+                      <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Rendered Pages</span>
+                      <span className="text-xs sm:text-sm font-bold font-mono text-[#B85D3E]">{manuscriptAnalysis.renderedPageCount}</span>
+                    </div>
+                    <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
+                      <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Chapters Found</span>
+                      <span className="text-xs sm:text-sm font-bold font-mono">{manuscriptAnalysis.detectedChapters.length}</span>
+                    </div>
+                    <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
+                      <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Paragraph Blocks</span>
+                      <span className="text-xs sm:text-sm font-bold font-mono">{manuscriptAnalysis.paragraphCount}</span>
+                    </div>
+                  </div>
+
+                  {/* Synchronize Page Count Button */}
+                  {manuscriptAnalysis.renderedPageCount !== pageCount && (
+                    <div className="mb-5 p-3 rounded-2xl border border-[#B85D3E]/30 bg-[#FAF4ED] dark:bg-[#251E1C] flex items-center justify-between text-xs">
+                      <span className="text-[11px] text-[#8C8479]">
+                        Detected page extent is <b>{manuscriptAnalysis.renderedPageCount} pages</b> (configured: {pageCount} pages).
+                      </span>
+                      <button
+                        onClick={() => setPageCount(manuscriptAnalysis.renderedPageCount)}
+                        className="px-3 py-1 bg-[#B85D3E] text-white rounded-full text-xs font-semibold shadow-sm"
+                      >
+                        Sync Extent ({manuscriptAnalysis.renderedPageCount} pgs)
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Formatting Anomalies & Passes */}
+                  <div className="space-y-2.5">
+                    {manuscriptAnalysis.anomalies.map((anom, idx) => (
+                      <div key={idx} className="p-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 flex items-start gap-2.5 text-xs">
+                        <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-semibold block text-amber-700 dark:text-amber-400">{anom.title}</span>
+                          <span className="text-[11px] text-[#8C8479] leading-relaxed">{anom.message}</span>
+                        </div>
+                      </div>
+                    ))}
+
+                    {manuscriptAnalysis.passes.map((pass, idx) => (
+                      <div key={idx} className="p-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 flex items-start gap-2.5 text-xs">
+                        <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-semibold block text-emerald-700 dark:text-emerald-400">{pass.title}</span>
+                          <span className="text-[11px] text-[#8C8479] leading-relaxed">{pass.message}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
           )}
 
           {/* Sub-Mode 2: Visual Image Strip */}
@@ -1128,7 +1206,8 @@ export default function Home() {
           </div>
         </div>
       )}
-            {/* STEP 3: COVER SPECIFICATIONS & SAFE AREA */}
+
+      {/* STEP 3: COVER SPECIFICATIONS & SAFE AREA */}
       {currentStep === 3 && (
         <div className="w-full max-w-4xl flex flex-col gap-6">
           <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
@@ -1150,7 +1229,6 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Dimension Matrix */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-6">
               <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
                 <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Spine Width</span>
@@ -1170,7 +1248,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Visual Cover Layout Blueprint */}
             <div className="w-full aspect-[2/1] rounded-2xl border border-dashed border-[#B85D3E]/40 p-3 flex items-center justify-between text-center relative overflow-hidden bg-black/5 dark:bg-white/5 mb-4">
               <div className="flex-1 h-full border border-black/10 dark:border-white/10 rounded-lg flex flex-col justify-center items-center p-2">
                 <span className="text-[10px] uppercase font-bold text-[#8C8479]">Back Cover</span>
@@ -1186,218 +1263,4 @@ export default function Home() {
             </div>
 
             <p className="text-[10px] text-center text-[#8C8479]">
-              0.125" mechanical bleed included. Enter exact pixel canvas ({coverPixelsWidth} × {coverPixelsHeight} px) into Canva / Photoshop.
-            </p>
-          </section>
-
-          {/* Step 3 Bottom Navigation */}
-          <div className="flex items-center justify-between pt-2">
-            <button
-              onClick={() => setCurrentStep(2)}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8C8479] hover:text-[#2D2A26]"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Step 2: Interior</span>
-            </button>
-            <button
-              onClick={() => setCurrentStep(4)}
-              className="inline-flex items-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md shadow-[#B85D3E]/20"
-            >
-              <span>Continue to Step 4: Preflight</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 4: PRINT PREFLIGHT & BOOK HEALTH */}
-      {currentStep === 4 && (
-        <div className="w-full max-w-4xl flex flex-col gap-6">
-          <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
-            isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
-          }`}>
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-[#5A8264]" />
-                <h2 className={`text-xs font-bold uppercase tracking-wider font-sans ${isDarkMode ? 'text-zinc-200' : 'text-[#1F1C18]'}`}>
-                  Book Health & Production Preflight
-                </h2>
-              </div>
-              <span className="text-[10px] text-[#5A8264] font-semibold bg-[#F0F5F1] dark:bg-[#1E2721] px-2.5 py-0.5 rounded-full border border-[#D5E3D8] dark:border-[#2D4534]">
-                Automated Verification
-              </span>
-            </div>
-
-            {/* Preflight Findings Checklist */}
-            <div className="space-y-3 mb-6">
-              <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-emerald-500" />
-                  <div>
-                    <span className="font-semibold block text-emerald-600 dark:text-emerald-400">Page Extent Compatible</span>
-                    <span className="text-[11px] text-[#8C8479]">{activeEffectivePages} pages meets the standard 24-page trade minimum.</span>
-                  </div>
-                </div>
-                <span className="text-[10px] font-mono font-bold text-emerald-600">PASS</span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-emerald-500" />
-                  <div>
-                    <span className="font-semibold block text-emerald-600 dark:text-emerald-400">Spine Gutter Margin</span>
-                    <span className="text-[11px] text-[#8C8479]">{gutter}" inner margin calculated to prevent spine text clipping.</span>
-                  </div>
-                </div>
-                <span className="text-[10px] font-mono font-bold text-emerald-600">PASS</span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2.5">
-                  <Check className="w-4 h-4 text-emerald-500" />
-                  <div>
-                    <span className="font-semibold block text-emerald-600 dark:text-emerald-400">300 DPI Raster Output</span>
-                    <span className="text-[11px] text-[#8C8479]">Cover dimensions calibrated to commercial 300 DPI specifications.</span>
-                  </div>
-                </div>
-                <span className="text-[10px] font-mono font-bold text-emerald-600">PASS</span>
-              </div>
-
-              {spineWidth < 0.20 && (
-                <div className="p-3.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2.5">
-                    <AlertTriangle className="w-4 h-4 text-amber-500" />
-                    <div>
-                      <span className="font-semibold block text-amber-600 dark:text-amber-400">Narrow Spine Notice</span>
-                      <span className="text-[11px] text-[#8C8479]">Spine width ({spineWidth}") is under 0.20". Text on the spine is not recommended.</span>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono font-bold text-amber-600">REVIEW</span>
-                </div>
-              )}
-            </div>
-
-            {/* Spec Sheet Export Action */}
-            <div className="pt-5 border-t border-black/5 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <span className="text-[11px] text-[#8C8479] font-sans">
-                Always verify final files against the current requirements of your selected publishing platform.
-              </span>
-              <button
-                onClick={() => {
-                  const spec = `PUBLISHSTUDIO - PRODUCTION SPECIFICATION REPORT\n` +
-                    `--------------------------------------------------\n` +
-                    `Publication Type: ${BOOK_ARCHETYPES[selectedArchetype]?.title}\n` +
-                    `Trim Dimensions: ${currentTrim.width}" x ${currentTrim.height}"\n` +
-                    `Page Count: ${activeEffectivePages}\n` +
-                    `Paper Stock: ${PAPER_SPECS[paperType]?.label}\n` +
-                    `Gutter Margin: ${gutter}"\n` +
-                    `Outside Margin: ${outsideMargin}"\n` +
-                    `Top/Bottom Margin: ${topBottomMargin}"\n\n` +
-                    `FULL-WRAP COVER SPECIFICATIONS:\n` +
-                    `Spine Width: ${spineWidth}"\n` +
-                    `Total Dimensions: ${fullCoverWidth}" x ${fullCoverHeight}"\n` +
-                    `Canvas at 300 DPI: ${coverPixelsWidth} x ${coverPixelsHeight} px\n` +
-                    `Mechanical Bleed: ${enableBleed ? '0.125"' : 'None'}\n` +
-                    `--------------------------------------------------\n` +
-                    `Generated by PublishStudio Zero-Server Production Studio`;
-                  const blob = new Blob([spec], { type: 'text/plain' });
-                  saveAs(blob, `Production_Specifications_${trimSize}.txt`);
-                }}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#5A8264] hover:bg-[#4C7055] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download Production Specification</span>
-              </button>
-            </div>
-          </section>
-
-          {/* Step 4 Back Action */}
-          <div className="flex items-center justify-between pt-2">
-            <button
-              onClick={() => setCurrentStep(3)}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8C8479] hover:text-[#2D2A26]"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Step 3: Cover</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Field Explanation Modal */}
-      {activeHelpModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className={`w-full max-w-md border rounded-3xl p-6 shadow-2xl relative text-left transition ${
-            isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
-          }`}>
-            <button
-              onClick={() => setActiveHelpModal(null)}
-              className="absolute top-5 right-5 text-[#8C8479] hover:text-[#1F1C18]"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <h3 className="text-sm font-bold font-serif mb-2">
-              {FIELD_EXPLANATIONS[activeHelpModal]?.term}
-            </h3>
-            <p className="text-xs text-[#7A7368] dark:text-[#8E8B92] leading-relaxed mb-3">
-              {FIELD_EXPLANATIONS[activeHelpModal]?.definition}
-            </p>
-            <div className="p-3 rounded-xl bg-black/5 dark:bg-white/5 text-[11px] text-[#524E49] dark:text-zinc-300">
-              <span className="font-semibold block mb-0.5">Why this matters:</span>
-              {FIELD_EXPLANATIONS[activeHelpModal]?.why}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Access Settings Modal (BYOK & Master Secret) */}
-      {showKeyModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className={`w-full max-w-md border rounded-3xl p-6 sm:p-7 shadow-2xl relative text-left transition ${
-            isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
-          }`}>
-            <button 
-              onClick={() => setShowKeyModal(false)}
-              className="absolute top-5 right-5 text-[#8C8479]"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <div className="flex items-center gap-2 mb-3">
-              <Key className="w-4 h-4 text-[#B85D3E]" />
-              <h3 className="text-sm font-bold font-serif">Studio Authorization</h3>
-            </div>
-            <input
-              type="password"
-              placeholder={isAdmin ? '••••••••••••••••' : 'API Key or Master Secret'}
-              value={tempKeyInput}
-              onChange={(e) => setTempKeyInput(e.target.value)}
-              className="w-full border rounded-xl px-3.5 py-2.5 text-xs mb-4 font-mono bg-transparent"
-            />
-            <div className="flex items-center justify-end gap-2">
-              <button
-                onClick={() => setShowKeyModal(false)}
-                className="px-4 py-2 text-xs text-[#8C8479]"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveSecret}
-                className="px-4 py-2 bg-[#B85D3E] text-white rounded-full text-xs font-semibold"
-              >
-                Authorize
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Studio Footer */}
-      <footer className={`w-full max-w-4xl border-t mt-auto pt-6 text-center text-[11px] font-sans ${
-        isDarkMode ? 'border-[#262429] text-[#716E77]' : 'border-[#EFEAE2] text-[#9E968B]'
-      }`}>
-        &copy; {new Date().getFullYear()} PUBLISHSTUDIO • Platform-Independent Book Production Architecture
-      </footer>
-    </main>
-  );
-          }
-    
+              0.125" mechanical bleed included. Enter exact pixel canvas ({coverPixelsWidth} × {coverPixelsHeight} p

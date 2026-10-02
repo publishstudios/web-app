@@ -4,8 +4,7 @@ import {
   Upload, BookOpen, Layers, Download, RefreshCw, 
   CheckCircle2, Sparkles, Printer, Sliders, Key, X, 
   Award, Sun, Moon, Crown, Eye, Maximize2, ShieldCheck,
-  Plus, Copy, Trash2, CheckSquare, Square, Grid, Image as ImageIcon,
-  Sparkle, AlertCircle
+  Plus, Copy, Trash2, CheckSquare, Square, Grid, Image as ImageIcon
 } from 'lucide-react';
 import { 
   Document, Packer, Paragraph, TextRun, HeadingLevel, 
@@ -30,7 +29,7 @@ export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [trimSize, setTrimSize] = useState('6x9');
   const [pageCount, setPageCount] = useState(120);
-  const [paperType, setPaperType] = useState('cream'); // 'cream' or 'white'
+  const [paperType, setPaperType] = useState('cream');
 
   const [bookTitle, setBookTitle] = useState('Title of the Work');
   const [authorName, setAuthorName] = useState('Author Name');
@@ -58,7 +57,7 @@ export default function Home() {
   const [isGeneratingPlanner, setIsGeneratingPlanner] = useState(false);
 
   // Visual Image Strip State
-  const [visualPages, setVisualPages] = useState([]); // { id, name, dataUrl, rawBytes, mimeType, width, height, dpi }
+  const [visualPages, setVisualPages] = useState([]);
   const [selectedPageIds, setSelectedPageIds] = useState(new Set());
   const [repeatMultiplier, setRepeatMultiplier] = useState(4);
   const [enableFolios, setEnableFolios] = useState(false);
@@ -121,7 +120,6 @@ export default function Home() {
     return 0.875;
   };
 
-  // Synchronize total extent with uploaded image pages or slider
   const activePages = activeTab === 'manuscript' 
     ? pageCount 
     : (plannerMode === 'visual_builder' && visualPages.length > 0 ? visualPages.length : plannerDays);
@@ -139,7 +137,6 @@ export default function Home() {
 
   const currentTrim = trimSpecs[trimSize] || trimSpecs['6x9'];
 
-  // Cover Calculator Math
   const paperThicknessMultiplier = paperType === 'cream' ? 0.0025 : 0.002252;
   const spineWidth = Number((activePages * paperThicknessMultiplier).toFixed(3));
   const bleed = 0.125;
@@ -155,7 +152,7 @@ export default function Home() {
     '8.5x11': { width: 8.5 * 1440, height: 11 * 1440 },
     '5x8': { width: 5 * 1440, height: 8 * 1440 },
   };
-    // Calculate true DPI for uploaded image against current trim size
+
   const calculateTrueDpi = (pixelWidth, pixelHeight) => {
     const targetWidth = enableBleed ? currentTrim.width + 0.125 : currentTrim.width;
     const targetHeight = enableBleed ? currentTrim.height + 0.25 : currentTrim.height;
@@ -164,7 +161,6 @@ export default function Home() {
     return Math.min(dpiX, dpiY);
   };
 
-  // Lossless binary image intake without HTML5 Canvas downsampling
   const processImageFile = async (file) => {
     const rawBuffer = await file.arrayBuffer();
     const rawBytes = new Uint8Array(rawBuffer);
@@ -189,12 +185,10 @@ export default function Home() {
     });
   };
 
-  // Batch Image Drop / Upload (Natural numerical sorting)
   const handleVisualBatchUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    // Natural sort filenames (page_1, page_2, page_10)
     files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
 
     const processed = [];
@@ -210,7 +204,6 @@ export default function Home() {
     if (visualBatchInputRef.current) visualBatchInputRef.current.value = '';
   };
 
-  // Insert single image after a specific index
   const handleInsertSingleImage = async (e) => {
     const file = e.target.files?.[0];
     if (!file || insertIndexRef.current === null) return;
@@ -226,7 +219,6 @@ export default function Home() {
     if (visualSingleInputRef.current) visualSingleInputRef.current.value = '';
   };
 
-  // Card Operations: Duplicate Single
   const duplicateSingleCard = (idx) => {
     setVisualPages((prev) => {
       const target = prev[idx];
@@ -240,12 +232,10 @@ export default function Home() {
     });
   };
 
-  // Card Operations: Delete Single
   const deleteSingleCard = (idx) => {
     setVisualPages((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  // Multi-Select Operations
   const toggleSelectCard = (id) => {
     setSelectedPageIds((prev) => {
       const next = new Set(prev);
@@ -286,7 +276,6 @@ export default function Home() {
     setSelectedPageIds(new Set());
   };
 
-  // Lossless PDF-Lib Compiler (Zero Downsampling, Full DPI Passthrough)
   const handleExportVisualPdf = async () => {
     if (!visualPages.length) return;
     setIsCompilingPdf(true);
@@ -296,7 +285,6 @@ export default function Home() {
       const pdfDoc = await PDFDocument.create();
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-      // Convert inches to PDF points (1 inch = 72 points)
       const bleedTopBottomPt = enableBleed ? 0.125 * 72 : 0;
       const pageWidthPt = (currentTrim.width * 72) + (enableBleed ? 0.125 * 72 : 0);
       const pageHeightPt = (currentTrim.height * 72) + (bleedTopBottomPt * 2);
@@ -314,7 +302,6 @@ export default function Home() {
           embeddedImage = await pdfDoc.embedJpg(pageItem.rawBytes);
         }
 
-        // Draw image directly onto page bounds (lossless pixel retention)
         page.drawImage(embeddedImage, {
           x: 0,
           y: 0,
@@ -322,7 +309,6 @@ export default function Home() {
           height: pageHeightPt,
         });
 
-        // Optional running folios
         if (enableFolios) {
           const fontSize = 9;
           const text = `${pageNumber}`;
@@ -352,7 +338,6 @@ export default function Home() {
     }
   };
 
-  // Manuscript Upload & DOCX Handlers
   const handleFileUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -580,7 +565,8 @@ export default function Home() {
       setIsGeneratingPlanner(false);
     }
   };
-                     return (
+
+  return (
     <main className={`min-h-screen w-full overflow-x-hidden flex flex-col items-center px-3.5 sm:px-6 py-6 sm:py-8 transition-colors duration-300 ${
       isDarkMode 
         ? 'bg-[#121113] text-[#E8E6E3] selection:bg-[#3E2B25] selection:text-[#E07A5F]' 
@@ -846,7 +832,8 @@ export default function Home() {
           <span className="font-mono">Ready for Canva / Photoshop</span>
         </div>
       </section>
-                        {/* TAB 1: TYPESET STUDIO */}
+
+            {/* TAB 1: TYPESET STUDIO */}
       {activeTab === 'manuscript' && (
         <>
           <section className={`w-full max-w-4xl border rounded-3xl p-5 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-6 sm:mb-8 transition ${
@@ -1065,7 +1052,7 @@ export default function Home() {
           </section>
         </>
       )}
-                {/* TAB 2: PLANNER STUDIO (VISUAL STRIP & ARCHETYPES) */}
+            {/* TAB 2: PLANNER STUDIO (VISUAL STRIP & ARCHETYPES) */}
       {activeTab === 'planner' && (
         <section className={`w-full max-w-4xl border rounded-3xl p-5 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-6 sm:mb-8 transition ${
           isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
@@ -1359,7 +1346,6 @@ export default function Home() {
               )}
             </div>
           )}
-
           {/* MODE 2: CURATED DOCX ARCHETYPES */}
           {plannerMode === 'archetypes' && (
             <div>
@@ -1403,7 +1389,7 @@ export default function Home() {
                   </div>
                 </div>
 
-{/* Meal & Kitchen Command Card */}
+                {/* Meal & Kitchen Command Card */}
                 <div 
                   onClick={() => setPlannerType('meal_grocery')}
                   className={`p-4 rounded-3xl border cursor-pointer transition-all duration-200 text-left flex flex-col justify-between overflow-hidden ${
@@ -1614,4 +1600,6 @@ export default function Home() {
       </footer>
     </main>
   );
-                                                        }
+}
+
+          

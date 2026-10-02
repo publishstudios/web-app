@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Upload, BookOpen, Layers, Download, RefreshCw, 
   CheckCircle2, Sparkles, Printer, Sliders, Key, X, 
-  Award, Sun, Moon, Crown, Eye
+  Award, Sun, Moon, Crown, Eye, Maximize2, ShieldCheck
 } from 'lucide-react';
 import { 
   Document, Packer, Paragraph, TextRun, HeadingLevel, 
@@ -27,6 +27,7 @@ export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [trimSize, setTrimSize] = useState('6x9');
   const [pageCount, setPageCount] = useState(120);
+  const [paperType, setPaperType] = useState('cream'); // 'cream' or 'white'
 
   const [bookTitle, setBookTitle] = useState('Title of the Work');
   const [authorName, setAuthorName] = useState('Author Name');
@@ -103,9 +104,30 @@ export default function Home() {
     return 0.875;
   };
 
-  const gutter = calculateGutter(activeTab === 'manuscript' ? pageCount : plannerDays);
+  const activePages = activeTab === 'manuscript' ? pageCount : plannerDays;
+  const gutter = calculateGutter(activePages);
   const outsideMargin = 0.375;
   const topBottomMargin = 0.5;
+
+  const trimSpecs = {
+    '6x9': { width: 6.0, height: 9.0 },
+    '5.5x8.5': { width: 5.5, height: 8.5 },
+    '8.5x11': { width: 8.5, height: 11.0 },
+    '5x8': { width: 5.0, height: 8.0 },
+  };
+
+  const currentTrim = trimSpecs[trimSize] || trimSpecs['6x9'];
+
+  // Cover Calculator Mathematics
+  const paperThicknessMultiplier = paperType === 'cream' ? 0.0025 : 0.002252;
+  const spineWidth = Number((activePages * paperThicknessMultiplier).toFixed(3));
+  const bleed = 0.125;
+  const fullCoverWidth = Number(((currentTrim.width * 2) + spineWidth + (bleed * 2)).toFixed(3));
+  const fullCoverHeight = Number((currentTrim.height + (bleed * 2)).toFixed(3));
+
+  // 300 DPI Canvas Pixel Sizes (Canva / Photoshop / InDesign)
+  const coverPixelsWidth = Math.round(fullCoverWidth * 300);
+  const coverPixelsHeight = Math.round(fullCoverHeight * 300);
 
   const trimDimensionsTwips = {
     '6x9': { width: 6 * 1440, height: 9 * 1440 },
@@ -113,7 +135,8 @@ export default function Home() {
     '8.5x11': { width: 8.5 * 1440, height: 11 * 1440 },
     '5x8': { width: 5 * 1440, height: 8 * 1440 },
   };
-    const handleFileUpload = async (event) => {
+
+  const handleFileUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -279,6 +302,7 @@ export default function Home() {
               },
             },
             titlePage: true,
+            evenAndOddHeaders: true,
           },
           headers: {
             default: headerOdd,
@@ -339,7 +363,8 @@ export default function Home() {
       setIsGeneratingPlanner(false);
     }
   };
-    return (
+
+  return (
     <main className={`min-h-screen w-full overflow-x-hidden flex flex-col items-center px-3.5 sm:px-6 py-6 sm:py-8 transition-colors duration-300 ${
       isDarkMode 
         ? 'bg-[#121113] text-[#E8E6E3] selection:bg-[#3E2B25] selection:text-[#E07A5F]' 
@@ -368,7 +393,7 @@ export default function Home() {
                     ? 'bg-[#2A1D1A] text-[#E07A5F] border-[#4A2D25]' 
                     : 'bg-[#FAF3EC] text-[#B85D3E] border-[#E9DFD3]'
                 }`}>
-                  v3.9
+                  v4.0
                 </span>
               </div>
               <span className={`text-[10px] sm:text-[11px] font-sans block truncate ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'}`}>
@@ -451,7 +476,7 @@ export default function Home() {
       </header>
 
       {/* Manufacturing Trim & Margins Card */}
-      <section className={`w-full max-w-4xl border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-6 sm:mb-8 transition ${
+      <section className={`w-full max-w-4xl border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-6 transition ${
         isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
       }`}>
         <div className="flex items-center justify-between mb-4 sm:mb-5">
@@ -533,6 +558,71 @@ export default function Home() {
             </span>
             <span className={`text-xs sm:text-sm font-semibold font-mono ${isDarkMode ? 'text-zinc-200' : 'text-[#3B3731]'}`}>{topBottomMargin}"</span>
           </div>
+        </div>
+      </section>
+
+      {/* PHASE 3: AUTOMATED FULL-WRAP COVER CALCULATOR */}
+      <section className={`w-full max-w-4xl border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-6 sm:mb-8 transition ${
+        isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
+      }`}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Maximize2 className={`w-4 h-4 ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`} />
+            <h2 className={`text-xs font-bold uppercase tracking-wider font-sans ${isDarkMode ? 'text-zinc-200' : 'text-[#1F1C18]'}`}>
+              Full-Wrap Paperback Cover Dimensions
+            </h2>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setPaperType('cream')}
+              className={`text-[10px] px-2.5 py-1 rounded-full font-medium transition ${
+                paperType === 'cream'
+                  ? (isDarkMode ? 'bg-[#3A2A22] text-[#E07A5F] border border-[#52382D]' : 'bg-[#FAF3EC] text-[#B85D3E] border border-[#E9DFD3]')
+                  : (isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]')
+              }`}
+            >
+              Cream Paper
+            </button>
+            <button
+              onClick={() => setPaperType('white')}
+              className={`text-[10px] px-2.5 py-1 rounded-full font-medium transition ${
+                paperType === 'white'
+                  ? (isDarkMode ? 'bg-[#3A2A22] text-[#E07A5F] border border-[#52382D]' : 'bg-[#FAF3EC] text-[#B85D3E] border border-[#E9DFD3]')
+                  : (isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]')
+              }`}
+            >
+              White Paper
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-4">
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
+            <span className={`text-[9px] uppercase tracking-wider block mb-1 font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#9E968B]'}`}>Spine Width</span>
+            <span className={`text-xs sm:text-sm font-bold font-mono ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`}>{spineWidth}"</span>
+          </div>
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
+            <span className={`text-[9px] uppercase tracking-wider block mb-1 font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#9E968B]'}`}>Total Width</span>
+            <span className={`text-xs sm:text-sm font-bold font-mono ${isDarkMode ? 'text-zinc-200' : 'text-[#1F1C18]'}`}>{fullCoverWidth}"</span>
+          </div>
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
+            <span className={`text-[9px] uppercase tracking-wider block mb-1 font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#9E968B]'}`}>Total Height</span>
+            <span className={`text-xs sm:text-sm font-bold font-mono ${isDarkMode ? 'text-zinc-200' : 'text-[#1F1C18]'}`}>{fullCoverHeight}"</span>
+          </div>
+          <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
+            <span className={`text-[9px] uppercase tracking-wider block mb-1 font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#9E968B]'}`}>Canvas @ 300 DPI</span>
+            <span className={`text-[11px] sm:text-xs font-bold font-mono ${isDarkMode ? 'text-emerald-400' : 'text-[#4F7358]'}`}>{coverPixelsWidth} x {coverPixelsHeight} px</span>
+          </div>
+        </div>
+
+        <div className={`flex items-center justify-between text-[10px] font-sans px-3.5 py-2.5 rounded-xl border ${
+          isDarkMode ? 'bg-[#121114] border-[#292630] text-[#8E8B92]' : 'bg-[#FAF8F5] border-[#EFEAE2] text-[#8C8479]'
+        }`}>
+          <div className="flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+            <span>KDP Bleed Standard: 0.125" included on all 4 outer margins</span>
+          </div>
+          <span className="font-mono">Ready for Canva / Photoshop</span>
         </div>
       </section>
 
@@ -646,8 +736,7 @@ export default function Home() {
               </div>
             )}
           </section>
-
-          {/* INTERACTIVE BOOK CRAFT EMPTY STATE: Fills empty mobile viewport */}
+                {/* INTERACTIVE BOOK CRAFT EMPTY STATE */}
           {!hasRendered && (
             <section className={`w-full max-w-4xl border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-8 transition ${
               isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
@@ -664,7 +753,6 @@ export default function Home() {
                 </span>
               </div>
 
-              {/* Tactile Side-by-Side Open Book Mockup */}
               <div className="relative w-full rounded-2xl bg-[#EBE5DC] dark:bg-[#0E0D10] p-3 sm:p-6 shadow-inner flex flex-col items-center">
                 <div className="w-full max-w-2xl grid grid-cols-2 gap-1 sm:gap-2 shadow-2xl rounded-sm overflow-hidden border border-[#D5CDBD] dark:border-[#282630]">
                   
@@ -672,14 +760,12 @@ export default function Home() {
                   <div className="bg-[#FAF8F5] text-[#2D2A26] p-4 sm:p-7 flex flex-col justify-between aspect-[1/1.42] relative select-none border-r border-[#E0D7C8]">
                     <div className="absolute right-0 top-0 bottom-0 w-2.5 bg-gradient-to-l from-black/10 to-transparent pointer-events-none" />
 
-                    {/* Verso Header: Author Name */}
                     <div className="text-center pb-2 border-b border-[#EADFD8]">
                       <span className="text-[9px] sm:text-[11px] font-serif uppercase tracking-widest text-[#7A7570] block truncate">
                         {authorName || 'AUTHOR NAME'}
                       </span>
                     </div>
 
-                    {/* Verso Text Content Lines */}
                     <div className="space-y-2 sm:space-y-2.5 my-auto">
                       <div className="h-1.5 bg-[#D8CFBF] rounded-full w-full opacity-80" />
                       <div className="h-1.5 bg-[#D8CFBF] rounded-full w-11/12 opacity-80" />
@@ -689,7 +775,6 @@ export default function Home() {
                       <div className="h-1.5 bg-[#D8CFBF] rounded-full w-10/12 opacity-75" />
                     </div>
 
-                    {/* Verso Mirrored Folio (Left-Aligned) */}
                     <div className="pt-2 border-t border-[#EADFD8] text-left">
                       <span className="text-[9px] sm:text-[11px] font-serif font-bold text-[#524E49]">
                         2
@@ -701,13 +786,13 @@ export default function Home() {
                   <div className="bg-[#FAF8F5] text-[#2D2A26] p-4 sm:p-7 flex flex-col justify-between aspect-[1/1.42] relative select-none">
                     <div className="absolute left-0 top-0 bottom-0 w-2.5 bg-gradient-to-r from-black/10 to-transparent pointer-events-none" />
 
-                    {/* Recto Header: Book Title */}
                     <div className="text-center pb-2 border-b border-[#EADFD8]">
                       <span className="text-[9px] sm:text-[11px] font-serif uppercase tracking-widest text-[#7A7570] block truncate">
                         {bookTitle || 'BOOK TITLE'}
                       </span>
                     </div>
-                                        {/* Chapter Heading + Editorial Drop Cap */}
+
+                    {/* Chapter Heading + Editorial Drop Cap */}
                     <div className="my-auto">
                       <div className="text-center mb-3 sm:mb-4">
                         <span className="text-[8px] sm:text-[10px] uppercase font-sans tracking-widest text-[#B85D3E] font-bold block">
@@ -761,6 +846,7 @@ export default function Home() {
           </section>
         </>
       )}
+
             {/* TAB 2: PLANNER GENERATOR */}
       {activeTab === 'planner' && (
         <section className={`w-full max-w-4xl border rounded-3xl p-5 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-6 sm:mb-8 transition ${
@@ -1022,5 +1108,4 @@ export default function Home() {
       </footer>
     </main>
   );
-}
-      
+            }

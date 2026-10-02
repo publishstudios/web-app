@@ -3,13 +3,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Upload, BookOpen, Layers, Download, RefreshCw, 
   CheckCircle2, Sparkles, Printer, Sliders, Key, X, 
-  Award, Sun, Moon, Crown, Eye, Maximize2, ShieldCheck
+  Award, Sun, Moon, Crown, Eye, Maximize2, ShieldCheck,
+  Plus, Copy, Trash2, CheckSquare, Square, Grid, Image as ImageIcon,
+  Sparkle, AlertCircle
 } from 'lucide-react';
 import { 
   Document, Packer, Paragraph, TextRun, HeadingLevel, 
   PageBreak, AlignmentType, Header, Footer, PageNumber
 } from 'docx';
 import { saveAs } from 'file-saver';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { generatePlannerDocx } from './plannerEngine';
 
 // Secure SHA-256 Hash of "StudioMasterAdmin"
@@ -39,6 +42,7 @@ export default function Home() {
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [tempKeyInput, setTempKeyInput] = useState('');
 
+  // Manuscript State
   const [fileName, setFileName] = useState('');
   const [rawTextLines, setRawTextLines] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -46,12 +50,25 @@ export default function Home() {
   const [hasRendered, setHasRendered] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
+  // Planner Tab: Mode Switcher ('archetypes' | 'visual_builder')
+  const [plannerMode, setPlannerMode] = useState('visual_builder');
   const [plannerType, setPlannerType] = useState('daily_focus');
   const [plannerDays, setPlannerDays] = useState(90);
   const [customNiche, setCustomNiche] = useState('');
   const [isGeneratingPlanner, setIsGeneratingPlanner] = useState(false);
 
+  // Visual Image Strip State
+  const [visualPages, setVisualPages] = useState([]); // { id, name, dataUrl, rawBytes, mimeType, width, height, dpi }
+  const [selectedPageIds, setSelectedPageIds] = useState(new Set());
+  const [repeatMultiplier, setRepeatMultiplier] = useState(4);
+  const [enableFolios, setEnableFolios] = useState(false);
+  const [enableBleed, setEnableBleed] = useState(true);
+  const [isCompilingPdf, setIsCompilingPdf] = useState(false);
+
   const fileInputRef = useRef(null);
+  const visualBatchInputRef = useRef(null);
+  const visualSingleInputRef = useRef(null);
+  const insertIndexRef = useRef(null);
   const docxViewerRef = useRef(null);
 
   useEffect(() => {
@@ -104,7 +121,11 @@ export default function Home() {
     return 0.875;
   };
 
-  const activePages = activeTab === 'manuscript' ? pageCount : plannerDays;
+  // Synchronize total extent with uploaded image pages or slider
+  const activePages = activeTab === 'manuscript' 
+    ? pageCount 
+    : (plannerMode === 'visual_builder' && visualPages.length > 0 ? visualPages.length : plannerDays);
+
   const gutter = calculateGutter(activePages);
   const outsideMargin = 0.375;
   const topBottomMargin = 0.5;
@@ -118,14 +139,13 @@ export default function Home() {
 
   const currentTrim = trimSpecs[trimSize] || trimSpecs['6x9'];
 
-  // Cover Calculator Mathematics
+  // Cover Calculator Math
   const paperThicknessMultiplier = paperType === 'cream' ? 0.0025 : 0.002252;
   const spineWidth = Number((activePages * paperThicknessMultiplier).toFixed(3));
   const bleed = 0.125;
   const fullCoverWidth = Number(((currentTrim.width * 2) + spineWidth + (bleed * 2)).toFixed(3));
   const fullCoverHeight = Number((currentTrim.height + (bleed * 2)).toFixed(3));
 
-  // 300 DPI Canvas Pixel Sizes (Canva / Photoshop / InDesign)
   const coverPixelsWidth = Math.round(fullCoverWidth * 300);
   const coverPixelsHeight = Math.round(fullCoverHeight * 300);
 
@@ -135,7 +155,204 @@ export default function Home() {
     '8.5x11': { width: 8.5 * 1440, height: 11 * 1440 },
     '5x8': { width: 5 * 1440, height: 8 * 1440 },
   };
+    // Calculate true DPI for uploaded image against current trim size
+  const calculateTrueDpi = (pixelWidth, pixelHeight) => {
+    const targetWidth = enableBleed ? currentTrim.width + 0.125 : currentTrim.width;
+    const targetHeight = enableBleed ? currentTrim.height + 0.25 : currentTrim.height;
+    const dpiX = Math.round(pixelWidth / targetWidth);
+    const dpiY = Math.round(pixelHeight / targetHeight);
+    return Math.min(dpiX, dpiY);
+  };
 
+  // Lossless binary image intake without HTML5 Canvas downsampling
+  const processImageFile = async (file) => {
+    const rawBuffer = await file.arrayBuffer();
+    const rawBytes = new Uint8Array(rawBuffer);
+    const dataUrl = URL.createObjectURL(file);
+
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const dpi = calculateTrueDpi(img.naturalWidth, img.naturalHeight);
+        resolve({
+          id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: file.name,
+          dataUrl,
+          rawBytes,
+          mimeType: file.type || 'image/png',
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+          dpi,
+        });
+      };
+      img.src = dataUrl;
+    });
+  };
+
+  // Batch Image Drop / Upload (Natural numerical sorting)
+  const handleVisualBatchUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    // Natural sort filenames (page_1, page_2, page_10)
+    files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
+    const processed = [];
+    for (const f of files) {
+      if (f.type.startsWith('image/')) {
+        const item = await processImageFile(f);
+        processed.push(item);
+      }
+    }
+
+    setVisualPages((prev) => [...prev, ...processed]);
+    setStatusMessage(`Added ${processed.length} image pages to visual strip.`);
+    if (visualBatchInputRef.current) visualBatchInputRef.current.value = '';
+  };
+
+  // Insert single image after a specific index
+  const handleInsertSingleImage = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || insertIndexRef.current === null) return;
+
+    const item = await processImageFile(file);
+    setVisualPages((prev) => {
+      const next = [...prev];
+      next.splice(insertIndexRef.current + 1, 0, item);
+      return next;
+    });
+
+    insertIndexRef.current = null;
+    if (visualSingleInputRef.current) visualSingleInputRef.current.value = '';
+  };
+
+  // Card Operations: Duplicate Single
+  const duplicateSingleCard = (idx) => {
+    setVisualPages((prev) => {
+      const target = prev[idx];
+      const clone = {
+        ...target,
+        id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      };
+      const next = [...prev];
+      next.splice(idx + 1, 0, clone);
+      return next;
+    });
+  };
+
+  // Card Operations: Delete Single
+  const deleteSingleCard = (idx) => {
+    setVisualPages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  // Multi-Select Operations
+  const toggleSelectCard = (id) => {
+    setSelectedPageIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedPageIds.size === visualPages.length) {
+      setSelectedPageIds(new Set());
+    } else {
+      setSelectedPageIds(new Set(visualPages.map((p) => p.id)));
+    }
+  };
+
+  const handleDuplicateSelectedSet = () => {
+    if (!selectedPageIds.size) return;
+    const selectedItems = visualPages.filter((p) => selectedPageIds.has(p.id));
+    const clones = [];
+
+    for (let r = 0; r < repeatMultiplier; r++) {
+      selectedItems.forEach((item) => {
+        clones.push({
+          ...item,
+          id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        });
+      });
+    }
+
+    setVisualPages((prev) => [...prev, ...clones]);
+    setStatusMessage(`Duplicated set of ${selectedItems.length} pages × ${repeatMultiplier} times.`);
+  };
+
+  const handleDeleteSelected = () => {
+    setVisualPages((prev) => prev.filter((p) => !selectedPageIds.has(p.id)));
+    setSelectedPageIds(new Set());
+  };
+
+  // Lossless PDF-Lib Compiler (Zero Downsampling, Full DPI Passthrough)
+  const handleExportVisualPdf = async () => {
+    if (!visualPages.length) return;
+    setIsCompilingPdf(true);
+    setStatusMessage('Compiling lossless PDF interior...');
+
+    try {
+      const pdfDoc = await PDFDocument.create();
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+      // Convert inches to PDF points (1 inch = 72 points)
+      const bleedTopBottomPt = enableBleed ? 0.125 * 72 : 0;
+      const pageWidthPt = (currentTrim.width * 72) + (enableBleed ? 0.125 * 72 : 0);
+      const pageHeightPt = (currentTrim.height * 72) + (bleedTopBottomPt * 2);
+
+      for (let i = 0; i < visualPages.length; i++) {
+        const pageItem = visualPages[i];
+        const page = pdfDoc.addPage([pageWidthPt, pageHeightPt]);
+        const pageNumber = i + 1;
+        const isEven = pageNumber % 2 === 0;
+
+        let embeddedImage;
+        if (pageItem.mimeType.includes('png')) {
+          embeddedImage = await pdfDoc.embedPng(pageItem.rawBytes);
+        } else {
+          embeddedImage = await pdfDoc.embedJpg(pageItem.rawBytes);
+        }
+
+        // Draw image directly onto page bounds (lossless pixel retention)
+        page.drawImage(embeddedImage, {
+          x: 0,
+          y: 0,
+          width: pageWidthPt,
+          height: pageHeightPt,
+        });
+
+        // Optional running folios
+        if (enableFolios) {
+          const fontSize = 9;
+          const text = `${pageNumber}`;
+          const textWidth = font.widthOfTextAtSize(text, fontSize);
+          const folioX = isEven ? 36 : pageWidthPt - 36 - textWidth;
+          const folioY = 24;
+
+          page.drawText(text, {
+            x: folioX,
+            y: folioY,
+            size: fontSize,
+            font,
+            color: rgb(0.3, 0.3, 0.3),
+          });
+        }
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      saveAs(blob, `Visual_Planner_${trimSize}_${visualPages.length}Pages.pdf`);
+      setStatusMessage(`Complete: Exported ${visualPages.length}-page lossless PDF interior.`);
+    } catch (err) {
+      console.error(err);
+      alert('Error creating PDF. Please check your image formats.');
+    } finally {
+      setIsCompilingPdf(false);
+    }
+  };
+
+  // Manuscript Upload & DOCX Handlers
   const handleFileUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -167,7 +384,7 @@ export default function Home() {
         });
 
         const extractedText = docxViewerRef.current.innerText || '';
-        const lines = extractedText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        const lines = extractedText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
         setRawTextLines(lines);
         setHasRendered(true);
       }
@@ -363,8 +580,7 @@ export default function Home() {
       setIsGeneratingPlanner(false);
     }
   };
-
-  return (
+                     return (
     <main className={`min-h-screen w-full overflow-x-hidden flex flex-col items-center px-3.5 sm:px-6 py-6 sm:py-8 transition-colors duration-300 ${
       isDarkMode 
         ? 'bg-[#121113] text-[#E8E6E3] selection:bg-[#3E2B25] selection:text-[#E07A5F]' 
@@ -393,11 +609,11 @@ export default function Home() {
                     ? 'bg-[#2A1D1A] text-[#E07A5F] border-[#4A2D25]' 
                     : 'bg-[#FAF3EC] text-[#B85D3E] border-[#E9DFD3]'
                 }`}>
-                  v4.0
+                  v4.5
                 </span>
               </div>
               <span className={`text-[10px] sm:text-[11px] font-sans block truncate ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'}`}>
-                Craft Print & Planner Studio
+                Craft Print & Low-Content Studio
               </span>
             </div>
           </div>
@@ -469,7 +685,7 @@ export default function Home() {
               }`}
             >
               <Sparkles className={`w-3.5 h-3.5 ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`} />
-              <span>Planner</span>
+              <span>Planner Studio</span>
             </button>
           </div>
         </div>
@@ -518,21 +734,26 @@ export default function Home() {
             <label className={`text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider block mb-1.5 sm:mb-2 font-sans ${
               isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'
             }`}>
-              {activeTab === 'manuscript' ? `Manuscript Extent (${pageCount} pages)` : `Planner Duration (${plannerDays} pages)`}
+              {activeTab === 'manuscript' 
+                ? `Manuscript Extent (${pageCount} pages)` 
+                : (plannerMode === 'visual_builder' && visualPages.length > 0 
+                    ? `Visual Strip Extent (${visualPages.length} pages)` 
+                    : `Planner Duration (${plannerDays} pages)`)}
             </label>
             <input
               type="range"
               min="24"
               max="500"
-              value={activeTab === 'manuscript' ? pageCount : plannerDays}
+              value={activeTab === 'manuscript' ? pageCount : (plannerMode === 'visual_builder' && visualPages.length > 0 ? visualPages.length : plannerDays)}
               onChange={(e) => {
                 const val = Number(e.target.value);
                 if (activeTab === 'manuscript') setPageCount(val);
                 else setPlannerDays(val);
               }}
+              disabled={activeTab === 'planner' && plannerMode === 'visual_builder' && visualPages.length > 0}
               className={`w-full h-2 rounded-lg appearance-none cursor-pointer accent-[#B85D3E] mt-3 ${
                 isDarkMode ? 'bg-[#292630]' : 'bg-[#EFEAE2]'
-              }`}
+              } ${activeTab === 'planner' && plannerMode === 'visual_builder' && visualPages.length > 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
             />
           </div>
         </div>
@@ -561,7 +782,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* PHASE 3: AUTOMATED FULL-WRAP COVER CALCULATOR */}
+      {/* FULL-WRAP COVER CALCULATOR */}
       <section className={`w-full max-w-4xl border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-6 sm:mb-8 transition ${
         isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
       }`}>
@@ -625,8 +846,7 @@ export default function Home() {
           <span className="font-mono">Ready for Canva / Photoshop</span>
         </div>
       </section>
-
-      {/* TAB 1: TYPESET STUDIO */}
+                        {/* TAB 1: TYPESET STUDIO */}
       {activeTab === 'manuscript' && (
         <>
           <section className={`w-full max-w-4xl border rounded-3xl p-5 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-6 sm:mb-8 transition ${
@@ -736,7 +956,8 @@ export default function Home() {
               </div>
             )}
           </section>
-                {/* INTERACTIVE BOOK CRAFT EMPTY STATE */}
+
+          {/* INTERACTIVE BOOK CRAFT EMPTY STATE */}
           {!hasRendered && (
             <section className={`w-full max-w-4xl border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-8 transition ${
               isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
@@ -756,7 +977,7 @@ export default function Home() {
               <div className="relative w-full rounded-2xl bg-[#EBE5DC] dark:bg-[#0E0D10] p-3 sm:p-6 shadow-inner flex flex-col items-center">
                 <div className="w-full max-w-2xl grid grid-cols-2 gap-1 sm:gap-2 shadow-2xl rounded-sm overflow-hidden border border-[#D5CDBD] dark:border-[#282630]">
                   
-                  {/* VERSO PAGE (Left Page / Even) */}
+                  {/* VERSO PAGE */}
                   <div className="bg-[#FAF8F5] text-[#2D2A26] p-4 sm:p-7 flex flex-col justify-between aspect-[1/1.42] relative select-none border-r border-[#E0D7C8]">
                     <div className="absolute right-0 top-0 bottom-0 w-2.5 bg-gradient-to-l from-black/10 to-transparent pointer-events-none" />
 
@@ -782,7 +1003,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* RECTO PAGE (Right Page / Odd) */}
+                  {/* RECTO PAGE */}
                   <div className="bg-[#FAF8F5] text-[#2D2A26] p-4 sm:p-7 flex flex-col justify-between aspect-[1/1.42] relative select-none">
                     <div className="absolute left-0 top-0 bottom-0 w-2.5 bg-gradient-to-r from-black/10 to-transparent pointer-events-none" />
 
@@ -792,7 +1013,6 @@ export default function Home() {
                       </span>
                     </div>
 
-                    {/* Chapter Heading + Editorial Drop Cap */}
                     <div className="my-auto">
                       <div className="text-center mb-3 sm:mb-4">
                         <span className="text-[8px] sm:text-[10px] uppercase font-sans tracking-widest text-[#B85D3E] font-bold block">
@@ -820,7 +1040,6 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Recto Mirrored Folio (Right-Aligned) */}
                     <div className="pt-2 border-t border-[#EADFD8] text-right">
                       <span className="text-[9px] sm:text-[11px] font-serif font-bold text-[#524E49]">
                         3
@@ -837,7 +1056,7 @@ export default function Home() {
             </section>
           )}
 
-          {/* DOCX Native Sheets Viewer (Rendered on Upload) */}
+          {/* Native DOCX Sheets Viewer */}
           <section className="w-full max-w-4xl flex flex-col items-center">
             <div
               ref={docxViewerRef}
@@ -846,183 +1065,470 @@ export default function Home() {
           </section>
         </>
       )}
-
-            {/* TAB 2: PLANNER GENERATOR */}
+                {/* TAB 2: PLANNER STUDIO (VISUAL STRIP & ARCHETYPES) */}
       {activeTab === 'planner' && (
         <section className={`w-full max-w-4xl border rounded-3xl p-5 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.03)] mb-6 sm:mb-8 transition ${
           isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
         }`}>
-          <div className="flex items-center gap-2 mb-5 sm:mb-6">
-            <Sparkles className={`w-4 h-4 ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`} />
-            <h2 className={`text-xs font-bold uppercase tracking-wider font-sans ${isDarkMode ? 'text-zinc-200' : 'text-[#1F1C18]'}`}>
-              Curated Planner Archetypes
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 mb-6">
-            {/* Daily Focus Card */}
-            <div 
-              onClick={() => setPlannerType('daily_focus')}
-              className={`p-4 rounded-3xl border cursor-pointer transition-all duration-200 text-left flex flex-col justify-between overflow-hidden ${
-                plannerType === 'daily_focus' 
-                  ? (isDarkMode ? 'bg-[#241F20] border-[#E07A5F] shadow-lg ring-2 ring-[#E07A5F]/20' : 'bg-[#FAF4ED] border-[#B85D3E] shadow-md ring-2 ring-[#B85D3E]/20') 
-                  : (isDarkMode ? 'bg-[#151418] border-[#282630] hover:border-[#3A3745]' : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF]')
-              }`}
-            >
-              <div className="w-full h-32 sm:h-36 rounded-2xl relative overflow-hidden mb-4 shadow-sm group">
-                <img 
-                  src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80" 
-                  alt="Daily Focus" 
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-3 flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-bold text-white bg-black/40 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-white/20">
-                      90-Day Sprint
-                    </span>
-                    <div className="w-2.5 h-6 bg-[#B85D3E] rounded-b-sm shadow-sm" />
-                  </div>
-                  <div className="text-white">
-                    <div className="text-xs font-serif font-bold tracking-wide">The Focused Day</div>
-                    <span className="text-[10px] text-zinc-300 font-sans">Cognitive Deep Work</span>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <span className={`text-sm font-bold block mb-1 font-serif ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>
-                  Daily Focus & Timeblock
-                </span>
-                <p className={`text-[11px] leading-relaxed ${isDarkMode ? 'text-[#9E9BA3]' : 'text-[#6B6357]'}`}>
-                  Priorities, time blocks, and rotating cognitive deep work prompts.
-                </p>
-              </div>
+          {/* Sub-Mode Selector */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b border-[#EFEAE2] dark:border-[#262429] mb-6">
+            <div className="flex items-center gap-2">
+              <Sparkles className={`w-4 h-4 ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`} />
+              <h2 className={`text-xs font-bold uppercase tracking-wider font-sans ${isDarkMode ? 'text-zinc-200' : 'text-[#1F1C18]'}`}>
+                Planner Creation Engine
+              </h2>
             </div>
 
-            {/* Meal & Kitchen Command Card */}
-            <div 
-              onClick={() => setPlannerType('meal_grocery')}
-              className={`p-4 rounded-3xl border cursor-pointer transition-all duration-200 text-left flex flex-col justify-between overflow-hidden ${
-                plannerType === 'meal_grocery' 
-                  ? (isDarkMode ? 'bg-[#241F20] border-[#E07A5F] shadow-lg ring-2 ring-[#E07A5F]/20' : 'bg-[#FAF4ED] border-[#B85D3E] shadow-md ring-2 ring-[#B85D3E]/20') 
-                  : (isDarkMode ? 'bg-[#151418] border-[#282630] hover:border-[#3A3745]' : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF]')
-              }`}
-            >
-              <div className="w-full h-32 sm:h-36 rounded-2xl relative overflow-hidden mb-4 shadow-sm group">
-                <img 
-                  src="https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=600&q=80" 
-                  alt="Meal Command" 
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-3 flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-bold text-white bg-black/40 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-white/20">
-                      Weekly Rotation
-                    </span>
-                    <div className="w-2.5 h-6 bg-[#5A8264] rounded-b-sm shadow-sm" />
-                  </div>
-                  <div className="text-white">
-                    <div className="text-xs font-serif font-bold tracking-wide">Kitchen & Pantry</div>
-                    <span className="text-[10px] text-zinc-300 font-sans">Dinner & Grocery Matrix</span>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <span className={`text-sm font-bold block mb-1 font-serif ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>
-                  Meal & Kitchen Command
-                </span>
-                <p className={`text-[11px] leading-relaxed ${isDarkMode ? 'text-[#9E9BA3]' : 'text-[#6B6357]'}`}>
-                  Weekly lunch & dinner rotation tables with pantry checklists.
-                </p>
-              </div>
-            </div>
-
-            {/* Habit Tracking Matrix Card */}
-            <div 
-              onClick={() => setPlannerType('habit_matrix')}
-              className={`p-4 rounded-3xl border cursor-pointer transition-all duration-200 text-left flex flex-col justify-between overflow-hidden ${
-                plannerType === 'habit_matrix' 
-                  ? (isDarkMode ? 'bg-[#241F20] border-[#E07A5F] shadow-lg ring-2 ring-[#E07A5F]/20' : 'bg-[#FAF4ED] border-[#B85D3E] shadow-md ring-2 ring-[#B85D3E]/20') 
-                  : (isDarkMode ? 'bg-[#151418] border-[#282630] hover:border-[#3A3745]' : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF]')
-              }`}
-            >
-              <div className="w-full h-32 sm:h-36 rounded-2xl relative overflow-hidden mb-4 shadow-sm group">
-                <img 
-                  src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=600&q=80" 
-                  alt="Habit Matrix" 
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-3 flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-bold text-white bg-black/40 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-white/20">
-                      Habit Loops
-                    </span>
-                    <div className="w-2.5 h-6 bg-[#65619A] rounded-b-sm shadow-sm" />
-                  </div>
-                  <div className="text-white">
-                    <div className="text-xs font-serif font-bold tracking-wide">Atomic Rituals</div>
-                    <span className="text-[10px] text-zinc-300 font-sans">7-Day Consistency Grids</span>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <span className={`text-sm font-bold block mb-1 font-serif ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>
-                  Habit Tracking Matrix
-                </span>
-                <p className={`text-[11px] leading-relaxed ${isDarkMode ? 'text-[#9E9BA3]' : 'text-[#6B6357]'}`}>
-                  7-day tracker grids and habit loops with strategic focus rules.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Custom Infill Direction */}
-          <div className="mb-6">
-            <label className={`text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider block mb-1.5 sm:mb-2 font-sans ${
-              isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'
+            <div className={`p-1 rounded-full border flex items-center ${
+              isDarkMode ? 'bg-[#121114] border-[#282630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'
             }`}>
-              Custom Sub-Niche / AI Direction (Optional)
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Stoic Philosophy, Mediterranean Diet, ADHD Daily Executive Routine"
-              value={customNiche}
-              onChange={(e) => setCustomNiche(e.target.value)}
-              className={`w-full border rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none transition ${
-                isDarkMode 
-                  ? 'bg-[#121114] border-[#2D2A35] text-zinc-200 placeholder:text-zinc-600 focus:border-[#E07A5F]' 
-                  : 'bg-[#FAF9F6] border-[#E8E2D8] text-[#2D2A26] placeholder:text-[#9E968B] focus:border-[#B85D3E]'
-              }`}
-            />
-          </div>
+              <button
+                onClick={() => setPlannerMode('visual_builder')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition ${
+                  plannerMode === 'visual_builder'
+                    ? (isDarkMode ? 'bg-[#292630] text-white shadow-sm' : 'bg-white text-[#1F1C18] shadow-sm')
+                    : (isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]')
+                }`}
+              >
+                <ImageIcon className="w-3.5 h-3.5 text-[#B85D3E]" />
+                <span>Visual Image Strip</span>
+              </button>
 
-          <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 pt-5 border-t ${
-            isDarkMode ? 'border-[#292630]' : 'border-[#EFEAE2]'
-          }`}>
-            <div className={`text-xs font-mono text-center sm:text-left ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#6B6357]'}`}>
-              Output: <span className={`font-bold ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>{plannerDays} Pages</span> • Trim: <span className={`font-bold ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>{trimSize}"</span> • Gutter: <span className={`font-bold ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`}>{gutter}"</span>
+              <button
+                onClick={() => setPlannerMode('archetypes')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition ${
+                  plannerMode === 'archetypes'
+                    ? (isDarkMode ? 'bg-[#292630] text-white shadow-sm' : 'bg-white text-[#1F1C18] shadow-sm')
+                    : (isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]')
+                }`}
+              >
+                <Grid className="w-3.5 h-3.5 text-[#5A8264]" />
+                <span>DOCX Archetypes</span>
+              </button>
             </div>
-
-            <button
-              onClick={handleRunPlanner}
-              disabled={isGeneratingPlanner}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md shadow-[#B85D3E]/20 disabled:opacity-50"
-            >
-              {isGeneratingPlanner ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Synthesizing Document...</span>
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4" />
-                  <span>Generate Print-Ready Planner DOCX</span>
-                </>
-              )}
-            </button>
           </div>
+
+          {/* MODE 1: VISUAL IMAGE STRIP BUILDER */}
+          {plannerMode === 'visual_builder' && (
+            <div className="flex flex-col gap-6">
+              {/* Global Strip Controls */}
+              <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleSelectAll}
+                    disabled={!visualPages.length}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border font-medium transition disabled:opacity-40 ${
+                      isDarkMode ? 'bg-[#151418] border-[#282630] text-zinc-300' : 'bg-[#FAF8F5] border-[#E8E2D8] text-[#2D2A26]'
+                    }`}
+                  >
+                    {selectedPageIds.size > 0 && selectedPageIds.size === visualPages.length ? (
+                      <CheckSquare className="w-3.5 h-3.5 text-[#B85D3E]" />
+                    ) : (
+                      <Square className="w-3.5 h-3.5 text-[#8C8479]" />
+                    )}
+                    <span>Select All ({visualPages.length})</span>
+                  </button>
+
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={enableFolios}
+                      onChange={(e) => setEnableFolios(e.target.checked)}
+                      className="accent-[#B85D3E] rounded"
+                    />
+                    <span className={`text-[11px] font-sans ${isDarkMode ? 'text-zinc-300' : 'text-[#524E49]'}`}>
+                      Print Folios (Page Numbers)
+                    </span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={enableBleed}
+                      onChange={(e) => setEnableBleed(e.target.checked)}
+                      className="accent-[#B85D3E] rounded"
+                    />
+                    <span className={`text-[11px] font-sans ${isDarkMode ? 'text-zinc-300' : 'text-[#524E49]'}`}>
+                      0.125" Bleed Lock
+                    </span>
+                  </label>
+                </div>
+
+                <div className="text-[11px] font-mono text-[#8C8479]">
+                  Lossless Passthrough • 300+ DPI Preserved
+                </div>
+              </div>
+
+              {/* Multi-File Intake Dropzone */}
+              <input
+                ref={visualBatchInputRef}
+                type="file"
+                multiple
+                accept="image/png, image/jpeg, image/jpg"
+                onChange={handleVisualBatchUpload}
+                className="hidden"
+              />
+
+              <input
+                ref={visualSingleInputRef}
+                type="file"
+                accept="image/png, image/jpeg, image/jpg"
+                onChange={handleInsertSingleImage}
+                className="hidden"
+              />
+
+              {visualPages.length === 0 ? (
+                <div
+                  onClick={() => visualBatchInputRef.current?.click()}
+                  className={`w-full py-16 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center cursor-pointer transition ${
+                    isDarkMode 
+                      ? 'border-[#2D2A35] bg-[#141317] hover:border-[#E07A5F]/50' 
+                      : 'border-[#E2D8CC] bg-[#FAF8F5] hover:border-[#B85D3E]/50'
+                  }`}
+                >
+                  <div className="p-4 rounded-2xl bg-[#FAF4ED] dark:bg-[#251E1C] text-[#B85D3E] mb-3">
+                    <ImageIcon className="w-8 h-8" />
+                  </div>
+                  <span className={`text-sm font-bold font-serif mb-1 ${isDarkMode ? 'text-white' : 'text-[#1F1C18]'}`}>
+                    Drop Planner Page Images Here
+                  </span>
+                  <p className={`text-xs max-w-sm text-center mb-4 ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'}`}>
+                    Upload single templates, multi-page weekly sets, or complete books (PNG/JPG). Full resolution is retained untouched.
+                  </p>
+                  <span className="px-4 py-2 bg-[#B85D3E] text-white text-xs font-semibold rounded-full shadow-md shadow-[#B85D3E]/20">
+                    Browse Files
+                  </span>
+                </div>
+              ) : (
+                /* Atelier Visual Card Grid */
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 pb-20">
+                  {visualPages.map((page, index) => {
+                    const isSelected = selectedPageIds.has(page.id);
+                    const isUltraHd = page.dpi >= 400;
+                    const isSharp = page.dpi >= 300;
+
+                    return (
+                      <div
+                        key={page.id}
+                        className={`group relative rounded-2xl border overflow-hidden transition-all duration-200 flex flex-col justify-between ${
+                          isSelected 
+                            ? (isDarkMode ? 'ring-2 ring-[#E07A5F] border-[#E07A5F] bg-[#221C1B]' : 'ring-2 ring-[#B85D3E] border-[#B85D3E] bg-[#FAF3EC]') 
+                            : (isDarkMode ? 'border-[#292630] bg-[#141317]' : 'border-[#EAE3D8] bg-[#FAF9F6]')
+                        }`}
+                      >
+                        {/* Top Badges: Select Checkbox & DPI Pill */}
+                        <div className="p-2 flex items-center justify-between absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/60 to-transparent">
+                          <button
+                            onClick={() => toggleSelectCard(page.id)}
+                            className="text-white hover:text-[#E07A5F] transition"
+                          >
+                            {isSelected ? <CheckSquare className="w-4 h-4 text-[#B85D3E]" /> : <Square className="w-4 h-4 opacity-80" />}
+                          </button>
+
+                          <span className={`text-[9px] px-2 py-0.5 rounded-full font-mono font-bold backdrop-blur-md ${
+                            isUltraHd 
+                              ? 'bg-purple-900/70 text-purple-200 border border-purple-400/30' 
+                              : isSharp 
+                                ? 'bg-emerald-900/70 text-emerald-200 border border-emerald-400/30' 
+                                : 'bg-amber-900/70 text-amber-200 border border-amber-400/30'
+                          }`}>
+                            {page.dpi} DPI
+                          </span>
+                        </div>
+
+                        {/* Page Preview Thumbnail */}
+                        <div className="w-full aspect-[1/1.42] overflow-hidden bg-black/5 flex items-center justify-center relative">
+                          <img
+                            src={page.dataUrl}
+                            alt={page.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+
+                        {/* Bottom Label & Card Micro-Dock */}
+                        <div className="p-2.5 flex items-center justify-between border-t border-[#EFEAE2] dark:border-[#262429]">
+                          <span className="text-[10px] font-mono font-bold text-[#8C8479]">
+                            p. {index + 1}
+                          </span>
+
+                          {/* Action Dock (3 Modern Icons) */}
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => {
+                                insertIndexRef.current = index;
+                                visualSingleInputRef.current?.click();
+                              }}
+                              className="p-1 rounded-md hover:bg-black/10 dark:hover:bg-white/10 transition text-zinc-600 dark:text-zinc-300"
+                              title="Insert new image after this"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => duplicateSingleCard(index)}
+                              className="p-1 rounded-md hover:bg-black/10 dark:hover:bg-white/10 transition text-zinc-600 dark:text-zinc-300"
+                              title="Duplicate page"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => deleteSingleCard(index)}
+                              className="p-1 rounded-md hover:bg-rose-500/10 text-rose-500 transition"
+                              title="Remove page"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Floating Glass Set Duplication & PDF Export Bar */}
+              {visualPages.length > 0 && (
+                <div className="sticky bottom-6 w-full max-w-3xl mx-auto z-40">
+                  <div className={`p-3.5 rounded-3xl border shadow-2xl backdrop-blur-xl flex flex-wrap items-center justify-between gap-3 ${
+                    isDarkMode ? 'bg-[#18171B]/90 border-[#322F3B]' : 'bg-white/95 border-[#E6DDD0]'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => visualBatchInputRef.current?.click()}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-full border text-xs font-semibold transition ${
+                          isDarkMode ? 'bg-[#222026] border-[#34313B] text-zinc-200' : 'bg-[#FAF8F5] border-[#E2D8CC] text-[#1F1C18]'
+                        }`}
+                      >
+                        <Plus className="w-3.5 h-3.5 text-[#B85D3E]" />
+                        <span>Add Pages</span>
+                      </button>
+
+                      {selectedPageIds.size > 0 && (
+                        <div className="flex items-center gap-2 border-l pl-3 border-[#E2D8CC] dark:border-[#322F3B]">
+                          <select
+                            value={repeatMultiplier}
+                            onChange={(e) => setRepeatMultiplier(Number(e.target.value))}
+                            className={`border rounded-xl px-2 py-1 text-xs font-mono focus:outline-none ${
+                              isDarkMode ? 'bg-[#121114] border-[#322F3B] text-zinc-200' : 'bg-[#FAF9F6] border-[#E2D8CC] text-[#2D2A26]'
+                            }`}
+                          >
+                            <option value={1}>x 1 Repeat</option>
+                            <option value={4}>x 4 (1 Month)</option>
+                            <option value={12}>x 12 (1 Quarter)</option>
+                            <option value={52}>x 52 (Full Year)</option>
+                          </select>
+
+                          <button
+                            onClick={handleDuplicateSelectedSet}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-[#B85D3E] text-white rounded-full text-xs font-semibold shadow-sm"
+                            title="Duplicate selected set"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Duplicate Set ({selectedPageIds.size})</span>
+                          </button>
+
+                          <button
+                            onClick={handleDeleteSelected}
+                            className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-full transition"
+                            title="Delete Selected"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={handleExportVisualPdf}
+                      disabled={isCompilingPdf}
+                      className="inline-flex items-center gap-2 bg-[#5A8264] hover:bg-[#4C7055] text-white font-medium text-xs px-5 py-2.5 rounded-full transition shadow-md shadow-[#5A8264]/20 disabled:opacity-50"
+                    >
+                      {isCompilingPdf ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Embedding Lossless PDF...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Export Print PDF ({visualPages.length} pgs)</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* MODE 2: CURATED DOCX ARCHETYPES */}
+          {plannerMode === 'archetypes' && (
+            <div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 mb-6">
+                {/* Daily Focus Card */}
+                <div 
+                  onClick={() => setPlannerType('daily_focus')}
+                  className={`p-4 rounded-3xl border cursor-pointer transition-all duration-200 text-left flex flex-col justify-between overflow-hidden ${
+                    plannerType === 'daily_focus' 
+                      ? (isDarkMode ? 'bg-[#241F20] border-[#E07A5F] shadow-lg ring-2 ring-[#E07A5F]/20' : 'bg-[#FAF4ED] border-[#B85D3E] shadow-md ring-2 ring-[#B85D3E]/20') 
+                      : (isDarkMode ? 'bg-[#151418] border-[#282630] hover:border-[#3A3745]' : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF]')
+                  }`}
+                >
+                  <div className="w-full h-32 sm:h-36 rounded-2xl relative overflow-hidden mb-4 shadow-sm group">
+                    <img 
+                      src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80" 
+                      alt="Daily Focus" 
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-3 flex flex-col justify-between">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold text-white bg-black/40 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-white/20">
+                          90-Day Sprint
+                        </span>
+                        <div className="w-2.5 h-6 bg-[#B85D3E] rounded-b-sm shadow-sm" />
+                      </div>
+                      <div className="text-white">
+                        <div className="text-xs font-serif font-bold tracking-wide">The Focused Day</div>
+                        <span className="text-[10px] text-zinc-300 font-sans">Cognitive Deep Work</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className={`text-sm font-bold block mb-1 font-serif ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>
+                      Daily Focus & Timeblock
+                    </span>
+                    <p className={`text-[11px] leading-relaxed ${isDarkMode ? 'text-[#9E9BA3]' : 'text-[#6B6357]'}`}>
+                      Priorities, time blocks, and rotating cognitive deep work prompts.
+                    </p>
+                  </div>
+                </div>
+
+{/* Meal & Kitchen Command Card */}
+                <div 
+                  onClick={() => setPlannerType('meal_grocery')}
+                  className={`p-4 rounded-3xl border cursor-pointer transition-all duration-200 text-left flex flex-col justify-between overflow-hidden ${
+                    plannerType === 'meal_grocery' 
+                      ? (isDarkMode ? 'bg-[#241F20] border-[#E07A5F] shadow-lg ring-2 ring-[#E07A5F]/20' : 'bg-[#FAF4ED] border-[#B85D3E] shadow-md ring-2 ring-[#B85D3E]/20') 
+                      : (isDarkMode ? 'bg-[#151418] border-[#282630] hover:border-[#3A3745]' : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF]')
+                  }`}
+                >
+                  <div className="w-full h-32 sm:h-36 rounded-2xl relative overflow-hidden mb-4 shadow-sm group">
+                    <img 
+                      src="https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=600&q=80" 
+                      alt="Meal Command" 
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-3 flex flex-col justify-between">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold text-white bg-black/40 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-white/20">
+                          Weekly Rotation
+                        </span>
+                        <div className="w-2.5 h-6 bg-[#5A8264] rounded-b-sm shadow-sm" />
+                      </div>
+                      <div className="text-white">
+                        <div className="text-xs font-serif font-bold tracking-wide">Kitchen & Pantry</div>
+                        <span className="text-[10px] text-zinc-300 font-sans">Dinner & Grocery Matrix</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className={`text-sm font-bold block mb-1 font-serif ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>
+                      Meal & Kitchen Command
+                    </span>
+                    <p className={`text-[11px] leading-relaxed ${isDarkMode ? 'text-[#9E9BA3]' : 'text-[#6B6357]'}`}>
+                      Weekly lunch & dinner rotation tables with pantry checklists.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Habit Tracking Matrix Card */}
+                <div 
+                  onClick={() => setPlannerType('habit_matrix')}
+                  className={`p-4 rounded-3xl border cursor-pointer transition-all duration-200 text-left flex flex-col justify-between overflow-hidden ${
+                    plannerType === 'habit_matrix' 
+                      ? (isDarkMode ? 'bg-[#241F20] border-[#E07A5F] shadow-lg ring-2 ring-[#E07A5F]/20' : 'bg-[#FAF4ED] border-[#B85D3E] shadow-md ring-2 ring-[#B85D3E]/20') 
+                      : (isDarkMode ? 'bg-[#151418] border-[#282630] hover:border-[#3A3745]' : 'bg-[#FAF9F6] border-[#EAE3D8] hover:border-[#D8CFBF]')
+                  }`}
+                >
+                  <div className="w-full h-32 sm:h-36 rounded-2xl relative overflow-hidden mb-4 shadow-sm group">
+                    <img 
+                      src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=600&q=80" 
+                      alt="Habit Matrix" 
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-3 flex flex-col justify-between">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold text-white bg-black/40 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-white/20">
+                          Habit Loops
+                        </span>
+                        <div className="w-2.5 h-6 bg-[#65619A] rounded-b-sm shadow-sm" />
+                      </div>
+                      <div className="text-white">
+                        <div className="text-xs font-serif font-bold tracking-wide">Atomic Rituals</div>
+                        <span className="text-[10px] text-zinc-300 font-sans">7-Day Consistency Grids</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className={`text-sm font-bold block mb-1 font-serif ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>
+                      Habit Tracking Matrix
+                    </span>
+                    <p className={`text-[11px] leading-relaxed ${isDarkMode ? 'text-[#9E9BA3]' : 'text-[#6B6357]'}`}>
+                      7-day tracker grids and habit loops with strategic focus rules.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Custom Infill Direction */}
+              <div className="mb-6">
+                <label className={`text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider block mb-1.5 sm:mb-2 font-sans ${
+                  isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'
+                }`}>
+                  Custom Sub-Niche / AI Direction (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Stoic Philosophy, Mediterranean Diet, ADHD Daily Executive Routine"
+                  value={customNiche}
+                  onChange={(e) => setCustomNiche(e.target.value)}
+                  className={`w-full border rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none transition ${
+                    isDarkMode 
+                      ? 'bg-[#121114] border-[#2D2A35] text-zinc-200 placeholder:text-zinc-600 focus:border-[#E07A5F]' 
+                      : 'bg-[#FAF9F6] border-[#E8E2D8] text-[#2D2A26] placeholder:text-[#9E968B] focus:border-[#B85D3E]'
+                  }`}
+                />
+              </div>
+
+              <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 pt-5 border-t ${
+                isDarkMode ? 'border-[#292630]' : 'border-[#EFEAE2]'
+              }`}>
+                <div className={`text-xs font-mono text-center sm:text-left ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#6B6357]'}`}>
+                  Output: <span className={`font-bold ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>{plannerDays} Pages</span> • Trim: <span className={`font-bold ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>{trimSize}"</span> • Gutter: <span className={`font-bold ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`}>{gutter}"</span>
+                </div>
+
+                <button
+                  onClick={handleRunPlanner}
+                  disabled={isGeneratingPlanner}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md shadow-[#B85D3E]/20 disabled:opacity-50"
+                >
+                  {isGeneratingPlanner ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Synthesizing Document...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      <span>Generate Print-Ready Planner DOCX</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
 
           {statusMessage && (
             <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-[#5A8264] font-medium font-sans">
@@ -1108,4 +1614,4 @@ export default function Home() {
       </footer>
     </main>
   );
-            }
+                                                        }

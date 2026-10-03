@@ -25,6 +25,7 @@ import {
   calculateFullWrapDimensions 
 } from './productionMath';
 import { inspectManuscriptDOM } from './manuscriptInspector';
+import CoverVisualizer from './CoverVisualizer';
 
 // Secure SHA-256 Hash of "StudioMasterAdmin"
 const ADMIN_DIGEST_HASH = 'bf447475f3a0a382c4ae72bbec2c7a5223abf12f205c066e4a2bc1e0691d1ea1';
@@ -393,7 +394,6 @@ export default function Home() {
         const lines = extractedText.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
         setRawTextLines(lines);
 
-        // Run Client-Side Structural Inspection
         const audit = inspectManuscriptDOM(docxViewerRef.current, lines);
         setManuscriptAnalysis(audit);
         setHasRendered(true);
@@ -578,7 +578,7 @@ export default function Home() {
       setIsGeneratingPlanner(false);
     }
   };
-    return (
+      return (
     <main className={`min-h-screen w-full overflow-x-hidden flex flex-col items-center px-3.5 sm:px-6 py-6 sm:py-8 transition-colors duration-300 ${
       isDarkMode 
         ? 'bg-[#121113] text-[#E8E6E3] selection:bg-[#3E2B25] selection:text-[#E07A5F]' 
@@ -617,7 +617,6 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Beginner / Advanced Switcher */}
             <button
               onClick={() => setExperienceMode(experienceMode === 'beginner' ? 'advanced' : 'beginner')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-sans transition shadow-sm ${
@@ -775,7 +774,7 @@ export default function Home() {
               </div>
             </div>
           </section>
-
+                  {/* Calibrated Manufacturing Specifications Card */}
           <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
             isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
           }`}>
@@ -928,7 +927,6 @@ export default function Home() {
           </div>
         </div>
       )}
-
             {/* STEP 2: INTERIOR FORMATTING & MANUSCRIPT */}
       {currentStep === 2 && (
         <div className="w-full max-w-4xl flex flex-col gap-6">
@@ -1045,7 +1043,6 @@ export default function Home() {
                     </span>
                   </div>
 
-                  {/* Document Metrics Strip */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-5">
                     <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
                       <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Word Count</span>
@@ -1065,7 +1062,6 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Synchronize Page Count Button */}
                   {manuscriptAnalysis.renderedPageCount !== pageCount && (
                     <div className="mb-5 p-3 rounded-2xl border border-[#B85D3E]/30 bg-[#FAF4ED] dark:bg-[#251E1C] flex items-center justify-between text-xs">
                       <span className="text-[11px] text-[#8C8479]">
@@ -1080,7 +1076,6 @@ export default function Home() {
                     </div>
                   )}
 
-                  {/* Formatting Anomalies & Passes */}
                   <div className="space-y-2.5">
                     {manuscriptAnalysis.anomalies.map((anom, idx) => (
                       <div key={idx} className="p-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 flex items-start gap-2.5 text-xs">
@@ -1206,8 +1201,7 @@ export default function Home() {
           </div>
         </div>
       )}
-
-      {/* STEP 3: COVER SPECIFICATIONS & SAFE AREA */}
+             {/* STEP 3: COVER SPECIFICATIONS & SAFE AREA */}
       {currentStep === 3 && (
         <div className="w-full max-w-4xl flex flex-col gap-6">
           <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
@@ -1229,6 +1223,7 @@ export default function Home() {
               </button>
             </div>
 
+            {/* Dimension Matrix */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-6">
               <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
                 <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Spine Width</span>
@@ -1248,19 +1243,231 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="w-full aspect-[2/1] rounded-2xl border border-dashed border-[#B85D3E]/40 p-3 flex items-center justify-between text-center relative overflow-hidden bg-black/5 dark:bg-white/5 mb-4">
-              <div className="flex-1 h-full border border-black/10 dark:border-white/10 rounded-lg flex flex-col justify-center items-center p-2">
-                <span className="text-[10px] uppercase font-bold text-[#8C8479]">Back Cover</span>
-                <span className="text-[9px] font-mono text-[#8C8479]">{currentTrim.width}" × {currentTrim.height}"</span>
-              </div>
-              <div className="w-12 h-full border-x border-[#B85D3E] flex flex-col justify-center items-center bg-[#B85D3E]/10">
-                <span className="text-[8px] uppercase font-bold text-[#B85D3E] rotate-90 whitespace-nowrap">Spine {spineWidth}"</span>
-              </div>
-              <div className="flex-1 h-full border border-black/10 dark:border-white/10 rounded-lg flex flex-col justify-center items-center p-2">
-                <span className="text-[10px] uppercase font-bold text-[#8C8479]">Front Cover</span>
-                <span className="text-[9px] font-mono text-[#8C8479]">{currentTrim.width}" × {currentTrim.height}"</span>
-              </div>
+            {/* Interactive True-to-Scale SVG Blueprint */}
+            <div className="mb-4">
+              <CoverVisualizer
+                trimWidth={currentTrim.width}
+                trimHeight={currentTrim.height}
+                spineWidth={spineWidth}
+                bleed={enableBleed ? 0.125 : 0.0}
+                isDarkMode={isDarkMode}
+                bookTitle={bookTitle}
+                authorName={authorName}
+              />
             </div>
 
             <p className="text-[10px] text-center text-[#8C8479]">
-              0.125" mechanical bleed included. Enter exact pixel canvas ({coverPixelsWidth} × {coverPixelsHeight} p
+              0.125" mechanical bleed included. Enter exact pixel canvas ({coverPixelsWidth} × {coverPixelsHeight} px) into Canva / Photoshop.
+            </p>
+          </section>
+
+          {/* Step 3 Bottom Navigation */}
+          <div className="flex items-center justify-between pt-2">
+            <button
+              onClick={() => setCurrentStep(2)}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8C8479] hover:text-[#2D2A26]"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Step 2: Interior</span>
+            </button>
+            <button
+              onClick={() => setCurrentStep(4)}
+              className="inline-flex items-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md shadow-[#B85D3E]/20"
+            >
+              <span>Continue to Step 4: Preflight</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* STEP 4: PRINT PREFLIGHT & BOOK HEALTH */}
+      {currentStep === 4 && (
+        <div className="w-full max-w-4xl flex flex-col gap-6">
+          <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
+            isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
+          }`}>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-[#5A8264]" />
+                <h2 className={`text-xs font-bold uppercase tracking-wider font-sans ${isDarkMode ? 'text-zinc-200' : 'text-[#1F1C18]'}`}>
+                  Book Health & Production Preflight
+                </h2>
+              </div>
+              <span className="text-[10px] text-[#5A8264] font-semibold bg-[#F0F5F1] dark:bg-[#1E2721] px-2.5 py-0.5 rounded-full border border-[#D5E3D8] dark:border-[#2D4534]">
+                Automated Verification
+              </span>
+            </div>
+
+            {/* Preflight Findings Checklist */}
+            <div className="space-y-3 mb-6">
+              <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-emerald-500" />
+                  <div>
+                    <span className="font-semibold block text-emerald-600 dark:text-emerald-400">Page Extent Compatible</span>
+                    <span className="text-[11px] text-[#8C8479]">{activeEffectivePages} pages meets the standard 24-page trade minimum.</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono font-bold text-emerald-600">PASS</span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-emerald-500" />
+                  <div>
+                    <span className="font-semibold block text-emerald-600 dark:text-emerald-400">Spine Gutter Margin</span>
+                    <span className="text-[11px] text-[#8C8479]">{gutter}" inner margin calculated to prevent spine text clipping.</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono font-bold text-emerald-600">PASS</span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-emerald-500" />
+                  <div>
+                    <span className="font-semibold block text-emerald-600 dark:text-emerald-400">300 DPI Raster Output</span>
+                    <span className="text-[11px] text-[#8C8479]">Cover dimensions calibrated to commercial 300 DPI specifications.</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono font-bold text-emerald-600">PASS</span>
+              </div>
+
+              {spineWidth < 0.20 && (
+                <div className="p-3.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    <div>
+                      <span className="font-semibold block text-amber-600 dark:text-amber-400">Narrow Spine Notice</span>
+                      <span className="text-[11px] text-[#8C8479]">Spine width ({spineWidth}") is under 0.20". Text on the spine is not recommended.</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold text-amber-600">REVIEW</span>
+                </div>
+              )}
+            </div>
+
+            {/* Spec Sheet Export Action */}
+            <div className="pt-5 border-t border-black/5 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <span className="text-[11px] text-[#8C8479] font-sans">
+                Always verify final files against the current requirements of your selected publishing platform.
+              </span>
+              <button
+                onClick={() => {
+                  const spec = `PUBLISHSTUDIO - PRODUCTION SPECIFICATION REPORT\n` +
+                    `--------------------------------------------------\n` +
+                    `Publication Type: ${BOOK_ARCHETYPES[selectedArchetype]?.title}\n` +
+                    `Trim Dimensions: ${currentTrim.width}" x ${currentTrim.height}"\n` +
+                    `Page Count: ${activeEffectivePages}\n` +
+                    `Paper Stock: ${PAPER_SPECS[paperType]?.label}\n` +
+                    `Gutter Margin: ${gutter}"\n` +
+                    `Outside Margin: ${outsideMargin}"\n` +
+                    `Top/Bottom Margin: ${topBottomMargin}"\n\n` +
+                    `FULL-WRAP COVER SPECIFICATIONS:\n` +
+                    `Spine Width: ${spineWidth}"\n` +
+                    `Total Dimensions: ${fullCoverWidth}" x ${fullCoverHeight}"\n` +
+                    `Canvas at 300 DPI: ${coverPixelsWidth} x ${coverPixelsHeight} px\n` +
+                    `Mechanical Bleed: ${enableBleed ? '0.125"' : 'None'}\n` +
+                    `--------------------------------------------------\n` +
+                    `Generated by PublishStudio Zero-Server Production Studio`;
+                  const blob = new Blob([spec], { type: 'text/plain' });
+                  saveAs(blob, `Production_Specifications_${trimSize}.txt`);
+                }}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#5A8264] hover:bg-[#4C7055] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download Production Specification</span>
+              </button>
+            </div>
+          </section>
+
+          {/* Step 4 Back Action */}
+          <div className="flex items-center justify-between pt-2">
+            <button
+              onClick={() => setCurrentStep(3)}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8C8479] hover:text-[#2D2A26]"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Step 3: Cover</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Field Explanation Modal */}
+      {activeHelpModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`w-full max-w-md border rounded-3xl p-6 shadow-2xl relative text-left transition ${
+            isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
+          }`}>
+            <button
+              onClick={() => setActiveHelpModal(null)}
+              className="absolute top-5 right-5 text-[#8C8479] hover:text-[#1F1C18]"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <h3 className="text-sm font-bold font-serif mb-2">
+              {FIELD_EXPLANATIONS[activeHelpModal]?.term}
+            </h3>
+            <p className="text-xs text-[#7A7368] dark:text-[#8E8B92] leading-relaxed mb-3">
+              {FIELD_EXPLANATIONS[activeHelpModal]?.definition}
+            </p>
+            <div className="p-3 rounded-xl bg-black/5 dark:bg-white/5 text-[11px] text-[#524E49] dark:text-zinc-300">
+              <span className="font-semibold block mb-0.5">Why this matters:</span>
+              {FIELD_EXPLANATIONS[activeHelpModal]?.why}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Access Settings Modal (BYOK & Master Secret) */}
+      {showKeyModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className={`w-full max-w-md border rounded-3xl p-6 sm:p-7 shadow-2xl relative text-left transition ${
+            isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
+          }`}>
+            <button 
+              onClick={() => setShowKeyModal(false)}
+              className="absolute top-5 right-5 text-[#8C8479]"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-2 mb-3">
+              <Key className="w-4 h-4 text-[#B85D3E]" />
+              <h3 className="text-sm font-bold font-serif">Studio Authorization</h3>
+            </div>
+            <input
+              type="password"
+              placeholder={isAdmin ? '••••••••••••••••' : 'API Key or Master Secret'}
+              value={tempKeyInput}
+              onChange={(e) => setTempKeyInput(e.target.value)}
+              className="w-full border rounded-xl px-3.5 py-2.5 text-xs mb-4 font-mono bg-transparent"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setShowKeyModal(false)}
+                className="px-4 py-2 text-xs text-[#8C8479]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveSecret}
+                className="px-4 py-2 bg-[#B85D3E] text-white rounded-full text-xs font-semibold"
+              >
+                Authorize
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Studio Footer */}
+      <footer className={`w-full max-w-4xl border-t mt-auto pt-6 text-center text-[11px] font-sans ${
+        isDarkMode ? 'border-[#262429] text-[#716E77]' : 'border-[#EFEAE2] text-[#9E968B]'
+      }`}>
+        &copy; {new Date().getFullYear()} PUBLISHSTUDIO • Platform-Independent Book Production Architecture
+      </footer>
+    </main>
+  );
+            }

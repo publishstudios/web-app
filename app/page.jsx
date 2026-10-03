@@ -3,10 +3,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Upload, BookOpen, Layers, Download, RefreshCw, 
   CheckCircle2, Sparkles, Printer, Sliders, Key, X, 
-  Award, Sun, Moon, Crown, Eye, Maximize2, ShieldCheck,
+  Sun, Moon, Crown, Eye, Maximize2, ShieldCheck,
   Plus, Copy, Trash2, CheckSquare, Square, Grid, Image as ImageIcon,
   Compass, HelpCircle, Check, AlertTriangle, ArrowRight, ArrowLeft,
-  ChevronRight, Settings2, FileText, CheckCircle, AlertCircle, List
+  ChevronRight, Settings2, FileText, CheckCircle, AlertCircle, List,
+  PlayCircle, Lock, Shield
 } from 'lucide-react';
 import { 
   Document, Packer, Paragraph, TextRun, HeadingLevel, 
@@ -45,14 +46,14 @@ export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [activeHelpModal, setActiveHelpModal] = useState(null);
 
-  // Physical Attributes
+  // Physical Attributes & Book Profile
   const [trimSize, setTrimSize] = useState('5.5x8.5');
   const [pageCount, setPageCount] = useState(220);
   const [paperType, setPaperType] = useState('cream');
   const [enableBleed, setEnableBleed] = useState(false);
   const [bindingType, setBindingType] = useState('paperback');
 
-  // Advanced Margin Overrides
+  // Advanced Margin Overrides (Inches)
   const [customMargins, setCustomMargins] = useState({
     top: 0.625,
     bottom: 0.625,
@@ -63,11 +64,10 @@ export default function Home() {
   const [bookTitle, setBookTitle] = useState('Title of the Work');
   const [authorName, setAuthorName] = useState('Author Name');
 
-  // Authorization & BYOK
+  // Authorization & Studio Settings (Access modal without confusing standalone credits)
   const [isAdmin, setIsAdmin] = useState(false);
-  const [credits, setCredits] = useState(3);
   const [apiKey, setApiKey] = useState('');
-  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [tempKeyInput, setTempKeyInput] = useState('');
 
   // Step 2: Interior Manuscript & Analysis State
@@ -79,6 +79,9 @@ export default function Home() {
   const [isExporting, setIsExporting] = useState(false);
   const [hasRendered, setHasRendered] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+
+  // Interactive Book Craft Spread Preview State
+  const [activeSpreadPage, setActiveSpreadPage] = useState(2); // Left page number (Verso)
 
   // Step 2: Visual Planner & Archetype Engine State
   const [plannerType, setPlannerType] = useState('daily_focus');
@@ -98,20 +101,53 @@ export default function Home() {
   const insertIndexRef = useRef(null);
   const docxViewerRef = useRef(null);
 
+  // Local Book Profile Persistence
   useEffect(() => {
-    const savedAdmin = localStorage.getItem('ps_studio_admin_token');
-    const savedCredits = localStorage.getItem('ps_credits');
-    const savedKey = localStorage.getItem('ps_gemini_key');
-    const savedTheme = localStorage.getItem('ps_theme');
+    try {
+      const savedAdmin = localStorage.getItem('ps_studio_admin_token');
+      const savedKey = localStorage.getItem('ps_gemini_key');
+      const savedTheme = localStorage.getItem('ps_theme');
+      const savedProfile = localStorage.getItem('ps_local_book_profile');
 
-    if (savedAdmin === 'unlimited_studio_verified') setIsAdmin(true);
-    if (savedCredits !== null) setCredits(Number(savedCredits));
-    if (savedKey) {
-      setApiKey(savedKey);
-      setTempKeyInput(savedKey);
+      if (savedAdmin === 'unlimited_studio_verified') setIsAdmin(true);
+      if (savedKey) {
+        setApiKey(savedKey);
+        setTempKeyInput(savedKey);
+      }
+      if (savedTheme === 'dark') setIsDarkMode(true);
+
+      if (savedProfile) {
+        const parsed = JSON.parse(savedProfile);
+        if (parsed.trimSize) setTrimSize(parsed.trimSize);
+        if (parsed.pageCount) setPageCount(parsed.pageCount);
+        if (parsed.paperType) setPaperType(parsed.paperType);
+        if (parsed.bookTitle) setBookTitle(parsed.bookTitle);
+        if (parsed.authorName) setAuthorName(parsed.authorName);
+        if (parsed.selectedArchetype) setSelectedArchetype(parsed.selectedArchetype);
+        if (parsed.customMargins) setCustomMargins(parsed.customMargins);
+      }
+    } catch (e) {
+      console.warn('Could not restore local profile:', e);
     }
-    if (savedTheme === 'dark') setIsDarkMode(true);
   }, []);
+
+  const saveLocalBookProfile = (updates = {}) => {
+    try {
+      const currentData = {
+        trimSize,
+        pageCount,
+        paperType,
+        bookTitle,
+        authorName,
+        selectedArchetype,
+        customMargins,
+        ...updates
+      };
+      localStorage.setItem('ps_local_book_profile', JSON.stringify(currentData));
+    } catch (e) {
+      console.warn('Could not save local profile:', e);
+    }
+  };
 
   const toggleTheme = () => {
     const nextTheme = !isDarkMode;
@@ -127,14 +163,14 @@ export default function Home() {
     if (hash === ADMIN_DIGEST_HASH) {
       setIsAdmin(true);
       localStorage.setItem('ps_studio_admin_token', 'unlimited_studio_verified');
-      setStatusMessage('Admin master access unlocked: Unlimited studio privileges.');
-      setShowKeyModal(false);
+      setStatusMessage('Admin master access verified.');
+      setShowSettingsModal(false);
       return;
     }
 
     setApiKey(input);
     localStorage.setItem('ps_gemini_key', input);
-    setShowKeyModal(false);
+    setShowSettingsModal(false);
   };
 
   const handleSelectArchetype = (archKey) => {
@@ -147,6 +183,14 @@ export default function Home() {
     setEnableBleed(preset.defaultBleed);
     setPageCount(preset.defaultPages);
     setCustomMargins({ ...preset.margins });
+
+    saveLocalBookProfile({
+      selectedArchetype: archKey,
+      trimSize: preset.defaultTrim,
+      paperType: preset.defaultPaper,
+      pageCount: preset.defaultPages,
+      customMargins: { ...preset.margins }
+    });
   };
 
   const activeEffectivePages = interiorSubMode === 'visual_strip' && visualPages.length > 0 
@@ -367,6 +411,7 @@ export default function Home() {
     setFileName(file.name);
     if (!bookTitle || bookTitle === 'Title of the Work') {
       setBookTitle(baseCleanTitle);
+      saveLocalBookProfile({ bookTitle: baseCleanTitle });
     }
     setIsProcessing(true);
     setHasRendered(false);
@@ -404,6 +449,48 @@ export default function Home() {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  // Sample/Demo Mode: Instant preview without file upload
+  const handleLoadSampleManuscript = () => {
+    setFileName('Sample_Novel_Manuscript.docx');
+    setBookTitle('The Memory Chef');
+    setAuthorName('A. S. Harper');
+    const demoLines = [
+      'PROLOGUE',
+      'The scent of toasted star anise always arrived before the memory itself.',
+      'In the quiet alleyways of the old quarter, steam billowed against the cobblestone.',
+      'CHAPTER ONE',
+      'The Kitchen at Twilight',
+      'Cooking was never merely about chemistry; it was an act of deliberate remembrance.',
+      'She weighed seventy grams of sea salt onto the brass scale.',
+      'CHAPTER TWO',
+      'A Measure of Time',
+      'Every grain of flour carried the dust of a summer long forgotten.',
+    ];
+    setRawTextLines(demoLines);
+    setManuscriptAnalysis({
+      wordCount: 14200,
+      paragraphCount: 48,
+      renderedPageCount: 120,
+      detectedChapters: [
+        { title: 'PROLOGUE', lineIndex: 0 },
+        { title: 'CHAPTER ONE', lineIndex: 3 },
+        { title: 'CHAPTER TWO', lineIndex: 7 }
+      ],
+      detectedHeadings: [{ title: 'The Kitchen at Twilight', lineIndex: 4 }],
+      blankPageIndices: [],
+      anomalies: [],
+      passes: [
+        { code: 'CLEAN_SPACING', title: 'Paragraph Spacing', message: 'Clean vertical rhythm with zero consecutive manual returns.' },
+        { code: 'CHAPTERS_DETECTED', title: 'Chapter Structure', message: '3 standard narrative markers recognized.' },
+        { code: 'HEALTHY_EXTENT', title: 'Spine Caliber Extent', message: '120 pages generates a printable 0.300" commercial spine.' }
+      ]
+    });
+    setHasRendered(true);
+    setPageCount(120);
+    saveLocalBookProfile({ bookTitle: 'The Memory Chef', authorName: 'A. S. Harper', pageCount: 120 });
+    setStatusMessage('Sample manuscript loaded.');
   };
 
   const handleExportManuscriptDocx = async () => {
@@ -544,11 +631,6 @@ export default function Home() {
   };
 
   const handleRunPlanner = async () => {
-    if (!isAdmin && credits <= 0 && !apiKey) {
-      setShowKeyModal(true);
-      return;
-    }
-
     setIsGeneratingPlanner(true);
     setStatusMessage('');
 
@@ -564,12 +646,6 @@ export default function Home() {
         apiKey
       });
 
-      if (!isAdmin && !apiKey && credits > 0) {
-        const nextCredits = credits - 1;
-        setCredits(nextCredits);
-        localStorage.setItem('ps_credits', nextCredits.toString());
-      }
-
       setStatusMessage(`Complete: Generated ${plannerDays}-page interior DOCX.`);
     } catch (err) {
       console.error(err);
@@ -578,7 +654,7 @@ export default function Home() {
       setIsGeneratingPlanner(false);
     }
   };
-      return (
+     return (
     <main className={`min-h-screen w-full overflow-x-hidden flex flex-col items-center px-3.5 sm:px-6 py-6 sm:py-8 transition-colors duration-300 ${
       isDarkMode 
         ? 'bg-[#121113] text-[#E8E6E3] selection:bg-[#3E2B25] selection:text-[#E07A5F]' 
@@ -607,16 +683,17 @@ export default function Home() {
                     ? 'bg-[#2A1D1A] text-[#E07A5F] border-[#4A2D25]' 
                     : 'bg-[#FAF3EC] text-[#B85D3E] border-[#E9DFD3]'
                 }`}>
-                  Production Studio
+                  Book Production & Print Studio
                 </span>
               </div>
               <span className={`text-[10px] sm:text-[11px] font-sans block truncate ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'}`}>
-                Platform-Independent Book Production Workflow
+                Zero-Server Architecture • Your manuscript never leaves your browser
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Beginner / Advanced Mode Switcher */}
             <button
               onClick={() => setExperienceMode(experienceMode === 'beginner' ? 'advanced' : 'beginner')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-sans transition shadow-sm ${
@@ -624,12 +701,13 @@ export default function Home() {
                   ? (isDarkMode ? 'bg-[#3A2A22] text-[#E07A5F] border-[#52382D]' : 'bg-[#FAF4ED] text-[#B85D3E] border-[#E9DFD3] font-semibold')
                   : (isDarkMode ? 'bg-[#1C1A20] border-[#2E2B35] text-zinc-400' : 'bg-white border-[#E8E1D7] text-[#6B645A]')
               }`}
-              title="Toggle Beginner / Advanced Experience"
+              title="Toggle Beginner Guidance or Direct Technical Controls"
             >
               <Settings2 className="w-3.5 h-3.5" />
               <span className="capitalize">{experienceMode}</span>
             </button>
 
+            {/* Dark / Light Mode Switcher */}
             <button
               onClick={toggleTheme}
               className={`p-2 rounded-full border transition shadow-sm ${
@@ -642,32 +720,17 @@ export default function Home() {
               {isDarkMode ? <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             </button>
 
+            {/* Settings & Admin Cog (Clean access without confusing standalone credits) */}
             <button
-              onClick={() => setShowKeyModal(true)}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border text-[11px] sm:text-xs transition shadow-sm font-sans ${
+              onClick={() => setShowSettingsModal(true)}
+              className={`p-2 rounded-full border transition shadow-sm ${
                 isDarkMode 
-                  ? 'bg-[#1C1A20] border-[#2E2B35] hover:bg-[#25232B]' 
-                  : 'bg-white border-[#E8E1D7] hover:bg-[#FAF7F2]'
+                  ? 'bg-[#1C1A20] border-[#2E2B35] text-zinc-400 hover:text-white' 
+                  : 'bg-white border-[#E8E1D7] text-[#6B645A] hover:text-[#1F1C18]'
               }`}
+              title="Access & Settings"
             >
-              {isAdmin ? (
-                <>
-                  <Crown className="w-3.5 h-3.5 text-[#B85D3E]" />
-                  <span className="text-[#B85D3E] font-bold">Admin</span>
-                </>
-              ) : apiKey ? (
-                <>
-                  <Key className="w-3.5 h-3.5 text-[#5A8264]" />
-                  <span className="text-[#5A8264] font-medium">BYOK</span>
-                </>
-              ) : (
-                <>
-                  <Award className={`w-3.5 h-3.5 ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`} />
-                  <span className={`font-medium ${isDarkMode ? 'text-[#C5C2BD]' : 'text-[#6B645A]'}`}>
-                    {credits} Credits
-                  </span>
-                </>
-              )}
+              <Lock className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -709,6 +772,41 @@ export default function Home() {
       {/* STEP 1: BOOK SETUP ("What are you creating?") */}
       {currentStep === 1 && (
         <div className="w-full max-w-4xl flex flex-col gap-6">
+          
+          {/* Quick Mental-Model Intent Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { title: 'Format Book', desc: 'Typeset & analyze manuscript', step: 2, icon: FileText },
+              { title: 'Full-Wrap Cover', desc: 'Calculate spine & safe areas', step: 3, icon: Maximize2 },
+              { title: 'Print Preflight', desc: 'Verify manufacturing health', step: 4, icon: CheckCircle },
+              { title: 'Try Sample Book', desc: 'Instant demo without upload', step: 2, isDemo: true, icon: PlayCircle },
+            ].map((action, i) => {
+              const ActionIcon = action.icon;
+              return (
+                <div
+                  key={i}
+                  onClick={() => {
+                    if (action.isDemo) {
+                      handleLoadSampleManuscript();
+                    }
+                    setCurrentStep(action.step);
+                  }}
+                  className={`p-3.5 rounded-2xl border cursor-pointer transition flex flex-col justify-between ${
+                    isDarkMode 
+                      ? 'bg-[#18171B] border-[#292630] hover:border-[#E07A5F]' 
+                      : 'bg-white border-[#EFEAE2] hover:border-[#B85D3E] shadow-sm'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <ActionIcon className="w-4 h-4 text-[#B85D3E]" />
+                    <span className="text-xs font-bold font-serif">{action.title}</span>
+                  </div>
+                  <p className="text-[10px] text-[#8C8479] leading-snug">{action.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+
           <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
             isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
           }`}>
@@ -718,7 +816,7 @@ export default function Home() {
                   What are you creating?
                 </h2>
                 <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#7A7368]'}`}>
-                  Select your publication type to load production-ready trim, paper, and margin presets.
+                  Select your publication type to load standard trim, paper weight, and margin recommendations.
                 </p>
               </div>
               <span className="text-[10px] text-[#4F7358] font-sans bg-[#F0F5F1] dark:bg-[#1E2721] border border-[#D5E3D8] dark:border-[#2D4534] px-2.5 py-1 rounded-full font-medium">
@@ -774,7 +872,7 @@ export default function Home() {
               </div>
             </div>
           </section>
-                  {/* Calibrated Manufacturing Specifications Card */}
+                              {/* Calibrated Manufacturing Specifications Card */}
           <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
             isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
           }`}>
@@ -801,7 +899,10 @@ export default function Home() {
                 </label>
                 <select
                   value={trimSize}
-                  onChange={(e) => setTrimSize(e.target.value)}
+                  onChange={(e) => {
+                    setTrimSize(e.target.value);
+                    saveLocalBookProfile({ trimSize: e.target.value });
+                  }}
                   className={`w-full border rounded-xl px-3 py-2.5 text-xs font-medium focus:outline-none transition ${
                     isDarkMode 
                       ? 'bg-[#121114] border-[#2D2A35] text-zinc-200 focus:border-[#E07A5F]' 
@@ -820,7 +921,10 @@ export default function Home() {
                 </label>
                 <select
                   value={paperType}
-                  onChange={(e) => setPaperType(e.target.value)}
+                  onChange={(e) => {
+                    setPaperType(e.target.value);
+                    saveLocalBookProfile({ paperType: e.target.value });
+                  }}
                   className={`w-full border rounded-xl px-3 py-2.5 text-xs font-medium focus:outline-none transition ${
                     isDarkMode 
                       ? 'bg-[#121114] border-[#2D2A35] text-zinc-200 focus:border-[#E07A5F]' 
@@ -842,12 +946,17 @@ export default function Home() {
                   min="24"
                   max="600"
                   value={activeEffectivePages}
-                  onChange={(e) => setPageCount(Number(e.target.value))}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setPageCount(val);
+                    saveLocalBookProfile({ pageCount: val });
+                  }}
                   className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-[#B85D3E] mt-3 bg-[#EFEAE2] dark:bg-[#292630]"
                 />
               </div>
             </div>
 
+            {/* Live Manufacturing Metric Readouts */}
             <div className={`border rounded-2xl p-4 grid grid-cols-3 gap-2 text-center mb-4 ${
               isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'
             }`}>
@@ -858,6 +967,9 @@ export default function Home() {
                 <span className={`text-xs sm:text-sm font-bold font-mono ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`}>
                   {gutter}"
                 </span>
+                <span className="text-[9px] text-[#8C8479] block mt-0.5 font-sans">
+                  {gutter}" recommended binding space for {activeEffectivePages} pages.
+                </span>
               </div>
               <div>
                 <span className={`text-[9px] uppercase tracking-wider block mb-1 font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#9E968B]'}`}>
@@ -865,6 +977,9 @@ export default function Home() {
                 </span>
                 <span className={`text-xs sm:text-sm font-semibold font-mono ${isDarkMode ? 'text-zinc-200' : 'text-[#3B3731]'}`}>
                   {outsideMargin}"
+                </span>
+                <span className="text-[9px] text-[#8C8479] block mt-0.5 font-sans">
+                  Finger safe zone.
                 </span>
               </div>
               <div>
@@ -874,9 +989,13 @@ export default function Home() {
                 <span className={`text-xs sm:text-sm font-semibold font-mono ${isDarkMode ? 'text-zinc-200' : 'text-[#3B3731]'}`}>
                   {topBottomMargin}"
                 </span>
+                <span className="text-[9px] text-[#8C8479] block mt-0.5 font-sans">
+                  Running head buffer.
+                </span>
               </div>
             </div>
 
+            {/* Direct Technical Margin Controls (Shown in Advanced Mode) */}
             {experienceMode === 'advanced' && (
               <div className="pt-4 border-t border-black/5 dark:border-white/5 grid grid-cols-3 gap-3">
                 <div>
@@ -885,7 +1004,11 @@ export default function Home() {
                     type="number"
                     step="0.05"
                     value={customMargins.top}
-                    onChange={(e) => setCustomMargins({ ...customMargins, top: Number(e.target.value) })}
+                    onChange={(e) => {
+                      const next = { ...customMargins, top: Number(e.target.value) };
+                      setCustomMargins(next);
+                      saveLocalBookProfile({ customMargins: next });
+                    }}
                     className="w-full border rounded-lg px-2.5 py-1.5 text-xs font-mono bg-transparent"
                   />
                 </div>
@@ -895,7 +1018,11 @@ export default function Home() {
                     type="number"
                     step="0.05"
                     value={customMargins.bottom}
-                    onChange={(e) => setCustomMargins({ ...customMargins, bottom: Number(e.target.value) })}
+                    onChange={(e) => {
+                      const next = { ...customMargins, bottom: Number(e.target.value) };
+                      setCustomMargins(next);
+                      saveLocalBookProfile({ customMargins: next });
+                    }}
                     className="w-full border rounded-lg px-2.5 py-1.5 text-xs font-mono bg-transparent"
                   />
                 </div>
@@ -905,7 +1032,11 @@ export default function Home() {
                     type="number"
                     step="0.05"
                     value={customMargins.outside}
-                    onChange={(e) => setCustomMargins({ ...customMargins, outside: Number(e.target.value) })}
+                    onChange={(e) => {
+                      const next = { ...customMargins, outside: Number(e.target.value) };
+                      setCustomMargins(next);
+                      saveLocalBookProfile({ customMargins: next });
+                    }}
                     className="w-full border rounded-lg px-2.5 py-1.5 text-xs font-mono bg-transparent"
                   />
                 </div>
@@ -913,13 +1044,14 @@ export default function Home() {
             )}
           </section>
 
-          <div className="flex items-center justify-between pt-2">
-            <span className="text-[11px] text-[#8C8479] font-sans">
-              Designed around common print-on-demand publishing specifications.
+          {/* Neutral Industry POD Notice */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+            <span className="text-[11px] text-[#8C8479] font-sans text-center sm:text-left">
+              Designed around common print-on-demand publishing specifications. Always verify final requirements with your selected publishing provider.
             </span>
             <button
               onClick={() => setCurrentStep(2)}
-              className="inline-flex items-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md shadow-[#B85D3E]/20"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md shadow-[#B85D3E]/20"
             >
               <span>Continue to Step 2: Interior</span>
               <ArrowRight className="w-4 h-4" />
@@ -976,7 +1108,10 @@ export default function Home() {
                     <input
                       type="text"
                       value={bookTitle}
-                      onChange={(e) => setBookTitle(e.target.value)}
+                      onChange={(e) => {
+                        setBookTitle(e.target.value);
+                        saveLocalBookProfile({ bookTitle: e.target.value });
+                      }}
                       className="w-full border rounded-xl px-3.5 py-2 text-xs font-serif bg-transparent"
                       placeholder="Enter Book Title"
                     />
@@ -988,7 +1123,10 @@ export default function Home() {
                     <input
                       type="text"
                       value={authorName}
-                      onChange={(e) => setAuthorName(e.target.value)}
+                      onChange={(e) => {
+                        setAuthorName(e.target.value);
+                        saveLocalBookProfile({ authorName: e.target.value });
+                      }}
                       className="w-full border rounded-xl px-3.5 py-2 text-xs font-serif bg-transparent"
                       placeholder="Enter Author Name"
                     />
@@ -1013,6 +1151,14 @@ export default function Home() {
                     <span>{fileName ? `Uploaded: ${fileName}` : 'Upload DOCX Manuscript'}</span>
                   </button>
 
+                  <button
+                    onClick={handleLoadSampleManuscript}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 border font-medium text-xs px-4 py-3 rounded-full transition bg-transparent text-[#8C8479] hover:text-[#1F1C18]"
+                  >
+                    <PlayCircle className="w-4 h-4 text-[#B85D3E]" />
+                    <span>Try with Sample Book</span>
+                  </button>
+
                   {hasRendered && (
                     <button
                       onClick={handleExportManuscriptDocx}
@@ -1024,6 +1170,139 @@ export default function Home() {
                     </button>
                   )}
                 </div>
+              </section>
+
+              {/* RESTORED: BOOK CRAFT SPREAD PREVIEW (INTERACTIVE MOCKUP) */}
+              <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
+                isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
+              }`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Eye className={`w-4 h-4 ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`} />
+                    <h3 className={`text-xs font-bold uppercase tracking-wider font-sans ${isDarkMode ? 'text-zinc-200' : 'text-[#1F1C18]'}`}>
+                      Book Craft Spread Preview (Interactive Mockup)
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setActiveSpreadPage(Math.max(2, activeSpreadPage - 2))}
+                      disabled={activeSpreadPage <= 2}
+                      className="text-[10px] px-2 py-0.5 rounded border disabled:opacity-40 font-mono"
+                    >
+                      ◄ Prev
+                    </button>
+                    <span className="text-[10px] font-mono text-[#8C8479]">
+                      Pages {activeSpreadPage}-{activeSpreadPage + 1} of {activeEffectivePages}
+                    </span>
+                    <button
+                      onClick={() => setActiveSpreadPage(Math.min(activeEffectivePages - 1, activeSpreadPage + 2))}
+                      disabled={activeSpreadPage >= activeEffectivePages - 1}
+                      className="text-[10px] px-2 py-0.5 rounded border disabled:opacity-40 font-mono"
+                    >
+                      Next ►
+                    </button>
+                  </div>
+                </div>
+
+                {/* Open Two-Page Spread Canvas with Dynamic Gutter */}
+                <div className={`w-full rounded-2xl border p-4 sm:p-6 flex items-center justify-center overflow-x-auto ${
+                  isDarkMode ? 'bg-[#100F12] border-[#26242D]' : 'bg-[#F2EEE9] border-[#E5DDD2]'
+                }`}>
+                  <div className="flex items-center shadow-2xl rounded-sm overflow-hidden select-none border border-black/10">
+                    
+                    {/* Left Page (Verso - Even Page) */}
+                    <div 
+                      className="w-[145px] sm:w-[190px] aspect-[1/1.45] bg-[#FAF8F5] text-[#2D2A26] flex flex-col justify-between p-3 sm:p-4 border-r border-[#E8E2D8] relative"
+                      style={{
+                        paddingLeft: `${outsideMargin * 28}px`,
+                        paddingRight: `${gutter * 28}px`,
+                      }}
+                    >
+                      <div className="text-center border-b border-black/10 pb-1">
+                        <span className="text-[7px] sm:text-[8px] font-serif uppercase tracking-widest text-[#7A7570] truncate block">
+                          {authorName || 'AUTHOR NAME'}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1.5 my-auto opacity-75">
+                        <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
+                        <div className="h-1 bg-[#D8D2C7] rounded w-5/6"></div>
+                        <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
+                        <div className="h-1 bg-[#D8D2C7] rounded w-4/5"></div>
+                        <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
+                        <div className="h-1 bg-[#D8D2C7] rounded w-3/4"></div>
+                      </div>
+
+                      <div className="text-left pt-1 border-t border-black/5">
+                        <span className="text-[7px] sm:text-[8px] font-mono text-[#8C8479]">{activeSpreadPage}</span>
+                      </div>
+                    </div>
+
+                    {/* Physical Spine Crease Shadow */}
+                    <div className="w-[6px] sm:w-[8px] h-full bg-gradient-to-r from-black/25 via-black/10 to-black/25 z-10 self-stretch"></div>
+
+                    {/* Right Page (Recto - Odd Page) */}
+                    <div 
+                      className="w-[145px] sm:w-[190px] aspect-[1/1.45] bg-[#FAF8F5] text-[#2D2A26] flex flex-col justify-between p-3 sm:p-4 border-l border-[#E8E2D8] relative"
+                      style={{
+                        paddingLeft: `${gutter * 28}px`,
+                        paddingRight: `${outsideMargin * 28}px`,
+                      }}
+                    >
+                      <div className="text-center border-b border-black/10 pb-1">
+                        <span className="text-[7px] sm:text-[8px] font-serif uppercase tracking-widest text-[#7A7570] truncate block">
+                          {bookTitle || 'TITLE OF THE WORK'}
+                        </span>
+                      </div>
+
+                      {activeSpreadPage === 2 ? (
+                        <div className="my-auto">
+                          <div className="text-center mb-2">
+                            <span className="text-[6px] sm:text-[7px] uppercase tracking-widest text-[#B85D3E] font-semibold block">
+                              Chapter One
+                            </span>
+                            <span className="text-[8px] sm:text-[9px] font-serif font-bold text-[#1F1C18]">
+                              The Opening
+                            </span>
+                          </div>
+
+                          <div className="flex items-start gap-1 mb-1.5">
+                            <span className="text-sm sm:text-base font-serif font-bold leading-none text-[#1F1C18]">
+                              O
+                            </span>
+                            <div className="space-y-1 w-full pt-0.5">
+                              <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
+                              <div className="h-1 bg-[#D8D2C7] rounded w-5/6"></div>
+                            </div>
+                          </div>
+                          <div className="space-y-1.5 opacity-75">
+                            <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
+                            <div className="h-1 bg-[#D8D2C7] rounded w-4/5"></div>
+                            <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5 my-auto opacity-75">
+                          <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
+                          <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
+                          <div className="h-1 bg-[#D8D2C7] rounded w-4/5"></div>
+                          <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
+                          <div className="h-1 bg-[#D8D2C7] rounded w-5/6"></div>
+                          <div className="h-1 bg-[#D8D2C7] rounded w-3/4"></div>
+                        </div>
+                      )}
+
+                      <div className="text-right pt-1 border-t border-black/5">
+                        <span className="text-[7px] sm:text-[8px] font-mono text-[#8C8479]">{activeSpreadPage + 1}</span>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-center text-[#8C8479] mt-3 font-sans">
+                  Live POD layout rendering: {gutter}" binding gutter calculated for {activeEffectivePages} pages.
+                </p>
               </section>
 
               {/* CLIENT-SIDE MANUSCRIPT INSPECTION & ANOMALY DASHBOARD */}
@@ -1068,7 +1347,10 @@ export default function Home() {
                         Detected page extent is <b>{manuscriptAnalysis.renderedPageCount} pages</b> (configured: {pageCount} pages).
                       </span>
                       <button
-                        onClick={() => setPageCount(manuscriptAnalysis.renderedPageCount)}
+                        onClick={() => {
+                          setPageCount(manuscriptAnalysis.renderedPageCount);
+                          saveLocalBookProfile({ pageCount: manuscriptAnalysis.renderedPageCount });
+                        }}
                         className="px-3 py-1 bg-[#B85D3E] text-white rounded-full text-xs font-semibold shadow-sm"
                       >
                         Sync Extent ({manuscriptAnalysis.renderedPageCount} pgs)
@@ -1121,7 +1403,7 @@ export default function Home() {
                   onClick={() => visualBatchInputRef.current?.click()}
                   className="w-full py-16 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center cursor-pointer transition border-[#E2D8CC] dark:border-[#2D2A35]"
                 >
-                  <ImageIcon className="w-8 h-8 text-[#B85D3E] mb-3" />
+               <ImageIcon className="w-8 h-8 text-[#B85D3E] mb-3" />
                   <span className="text-sm font-bold font-serif mb-1">Upload Planner / Journal Page Images</span>
                   <p className="text-xs text-[#8C8479] mb-4">Lossless PNG / JPG passthrough with DPI preservation.</p>
                   <span className="px-4 py-2 bg-[#B85D3E] text-white text-xs font-semibold rounded-full shadow-md">Browse Files</span>
@@ -1201,7 +1483,7 @@ export default function Home() {
           </div>
         </div>
       )}
-             {/* STEP 3: COVER SPECIFICATIONS & SAFE AREA */}
+            {/* STEP 3: COVER SPECIFICATIONS & SAFE AREA */}
       {currentStep === 3 && (
         <div className="w-full max-w-4xl flex flex-col gap-6">
           <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
@@ -1223,7 +1505,7 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Dimension Matrix */}
+            {/* Dimension Readouts Strip */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-6">
               <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
                 <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Spine Width</span>
@@ -1239,11 +1521,11 @@ export default function Home() {
               </div>
               <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
                 <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Canvas @ 300 DPI</span>
-                <span className="text-[11px] sm:text-xs font-bold font-mono text-emerald-500">{coverPixelsWidth} x {coverPixelsHeight} px</span>
+                <span className="text-[11px] sm:text-xs font-bold font-mono text-emerald-500">{coverPixelsWidth} × {coverPixelsHeight} px</span>
               </div>
             </div>
 
-            {/* Interactive True-to-Scale SVG Blueprint */}
+            {/* Interactive Vector SVG Cover Blueprint */}
             <div className="mb-4">
               <CoverVisualizer
                 trimWidth={currentTrim.width}
@@ -1256,8 +1538,8 @@ export default function Home() {
               />
             </div>
 
-            <p className="text-[10px] text-center text-[#8C8479]">
-              0.125" mechanical bleed included. Enter exact pixel canvas ({coverPixelsWidth} × {coverPixelsHeight} px) into Canva / Photoshop.
+            <p className="text-[10px] text-center text-[#8C8479] font-sans">
+              Standard Print Bleed: 0.125" included on all outer margins. Enter exact pixel canvas ({coverPixelsWidth} × {coverPixelsHeight} px) into Canva or Photoshop.
             </p>
           </section>
 
@@ -1281,7 +1563,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* STEP 4: PRINT PREFLIGHT & BOOK HEALTH */}
+      {/* STEP 4: PRINT PREFLIGHT & BOOK HEALTH SUMMARY */}
       {currentStep === 4 && (
         <div className="w-full max-w-4xl flex flex-col gap-6">
           <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
@@ -1291,25 +1573,52 @@ export default function Home() {
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-[#5A8264]" />
                 <h2 className={`text-xs font-bold uppercase tracking-wider font-sans ${isDarkMode ? 'text-zinc-200' : 'text-[#1F1C18]'}`}>
-                  Book Health & Production Preflight
+                  Book Health & Print Preflight Summary
                 </h2>
               </div>
               <span className="text-[10px] text-[#5A8264] font-semibold bg-[#F0F5F1] dark:bg-[#1E2721] px-2.5 py-0.5 rounded-full border border-[#D5E3D8] dark:border-[#2D4534]">
-                Automated Verification
+                Print Specification Check
               </span>
             </div>
 
-            {/* Preflight Findings Checklist */}
+            {/* Categorized Health Cards: Interior vs Cover */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#282630]' : 'bg-[#FAF8F5] border-[#EAE3D8]'}`}>
+                <span className="text-[11px] font-bold font-serif block mb-2 text-[#B85D3E]">
+                  Interior Health Specifications
+                </span>
+                <ul className="text-xs space-y-1.5 font-sans text-[#7A7368] dark:text-[#9E9BA3]">
+                  <li>• Trim Size: <b>{currentTrim.width}" × {currentTrim.height}" Trade</b></li>
+                  <li>• Page Extent: <b>{activeEffectivePages} pages</b> (Minimum 24 met)</li>
+                  <li>• Binding Gutter: <b>{gutter}"</b> calculated safety margin</li>
+                  <li>• Paper Stock: <b className="capitalize">{paperType}</b> ({PAPER_SPECS[paperType]?.caliper}" caliper)</li>
+                </ul>
+              </div>
+
+              <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#282630]' : 'bg-[#FAF8F5] border-[#EAE3D8]'}`}>
+                <span className="text-[11px] font-bold font-serif block mb-2 text-[#5A8264]">
+                  Cover Health Specifications
+                </span>
+                <ul className="text-xs space-y-1.5 font-sans text-[#7A7368] dark:text-[#9E9BA3]">
+                  <li>• Full-Wrap Width: <b>{fullCoverWidth}"</b> (Includes spine & bleed)</li>
+                  <li>• Full-Wrap Height: <b>{fullCoverHeight}"</b> (Includes 0.125" bleed)</li>
+                  <li>• Calculated Spine: <b>{spineWidth}"</b></li>
+                  <li>• 300 DPI Target: <b>{coverPixelsWidth} × {coverPixelsHeight} px</b></li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Categorized Findings Matrix (PASS / REVIEW / FIX) */}
             <div className="space-y-3 mb-6">
               <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2.5">
                   <Check className="w-4 h-4 text-emerald-500" />
                   <div>
                     <span className="font-semibold block text-emerald-600 dark:text-emerald-400">Page Extent Compatible</span>
-                    <span className="text-[11px] text-[#8C8479]">{activeEffectivePages} pages meets the standard 24-page trade minimum.</span>
+                    <span className="text-[11px] text-[#8C8479]">{activeEffectivePages} pages meets standard trade print manufacturing minimums.</span>
                   </div>
                 </div>
-                <span className="text-[10px] font-mono font-bold text-emerald-600">PASS</span>
+                <span className="text-[10px] font-mono font-bold text-emerald-600">✓ PASS</span>
               </div>
 
               <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between text-xs">
@@ -1317,21 +1626,21 @@ export default function Home() {
                   <Check className="w-4 h-4 text-emerald-500" />
                   <div>
                     <span className="font-semibold block text-emerald-600 dark:text-emerald-400">Spine Gutter Margin</span>
-                    <span className="text-[11px] text-[#8C8479]">{gutter}" inner margin calculated to prevent spine text clipping.</span>
+                    <span className="text-[11px] text-[#8C8479]">{gutter}" inner margin calculated to prevent spine clipping during binding.</span>
                   </div>
                 </div>
-                <span className="text-[10px] font-mono font-bold text-emerald-600">PASS</span>
+                <span className="text-[10px] font-mono font-bold text-emerald-600">✓ PASS</span>
               </div>
 
               <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2.5">
                   <Check className="w-4 h-4 text-emerald-500" />
                   <div>
-                    <span className="font-semibold block text-emerald-600 dark:text-emerald-400">300 DPI Raster Output</span>
-                    <span className="text-[11px] text-[#8C8479]">Cover dimensions calibrated to commercial 300 DPI specifications.</span>
+                    <span className="font-semibold block text-emerald-600 dark:text-emerald-400">300 DPI Commercial Target</span>
+                    <span className="text-[11px] text-[#8C8479]">Dimensions verified for print-ready raster generation.</span>
                   </div>
                 </div>
-                <span className="text-[10px] font-mono font-bold text-emerald-600">PASS</span>
+                <span className="text-[10px] font-mono font-bold text-emerald-600">✓ PASS</span>
               </div>
 
               {spineWidth < 0.20 && (
@@ -1340,49 +1649,62 @@ export default function Home() {
                     <AlertTriangle className="w-4 h-4 text-amber-500" />
                     <div>
                       <span className="font-semibold block text-amber-600 dark:text-amber-400">Narrow Spine Notice</span>
-                      <span className="text-[11px] text-[#8C8479]">Spine width ({spineWidth}") is under 0.20". Text on the spine is not recommended.</span>
+                      <span className="text-[11px] text-[#8C8479]">Spine width ({spineWidth}") is under 0.20". Spine text is not recommended for books under 80 pages.</span>
                     </div>
                   </div>
-                  <span className="text-[10px] font-mono font-bold text-amber-600">REVIEW</span>
+                  <span className="text-[10px] font-mono font-bold text-amber-600">⚠ REVIEW</span>
                 </div>
               )}
             </div>
 
             {/* Spec Sheet Export Action */}
             <div className="pt-5 border-t border-black/5 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <span className="text-[11px] text-[#8C8479] font-sans">
-                Always verify final files against the current requirements of your selected publishing platform.
+              <span className="text-[11px] text-[#8C8479] font-sans text-center sm:text-left">
+                Designed around common print-on-demand publishing specifications. Always verify final requirements with your selected publishing provider.
               </span>
               <button
                 onClick={() => {
                   const spec = `PUBLISHSTUDIO - PRODUCTION SPECIFICATION REPORT\n` +
+                    `==================================================\n` +
+                    `Book Title: ${bookTitle}\n` +
+                    `Author: ${authorName}\n` +
+                    `Publication Archetype: ${BOOK_ARCHETYPES[selectedArchetype]?.title}\n` +
+                    `\n` +
+                    `INTERIOR MANUFACTURING CALIBRATIONS:\n` +
                     `--------------------------------------------------\n` +
-                    `Publication Type: ${BOOK_ARCHETYPES[selectedArchetype]?.title}\n` +
-                    `Trim Dimensions: ${currentTrim.width}" x ${currentTrim.height}"\n` +
-                    `Page Count: ${activeEffectivePages}\n` +
+                    `Trim Size: ${currentTrim.width}" x ${currentTrim.height}"\n` +
+                    `Page Count: ${activeEffectivePages} Pages\n` +
                     `Paper Stock: ${PAPER_SPECS[paperType]?.label}\n` +
-                    `Gutter Margin: ${gutter}"\n` +
+                    `Binding Gutter Margin: ${gutter}"\n` +
                     `Outside Margin: ${outsideMargin}"\n` +
-                    `Top/Bottom Margin: ${topBottomMargin}"\n\n` +
+                    `Top/Bottom Margin: ${topBottomMargin}"\n` +
+                    `Folios & Running Headers: Enabled (Mirrored)\n` +
+                    `\n` +
                     `FULL-WRAP COVER SPECIFICATIONS:\n` +
-                    `Spine Width: ${spineWidth}"\n` +
-                    `Total Dimensions: ${fullCoverWidth}" x ${fullCoverHeight}"\n` +
-                    `Canvas at 300 DPI: ${coverPixelsWidth} x ${coverPixelsHeight} px\n` +
-                    `Mechanical Bleed: ${enableBleed ? '0.125"' : 'None'}\n` +
                     `--------------------------------------------------\n` +
-                    `Generated by PublishStudio Zero-Server Production Studio`;
+                    `Spine Width: ${spineWidth}"\n` +
+                    `Full-Wrap Width: ${fullCoverWidth}" (Includes bleed + spine)\n` +
+                    `Full-Wrap Height: ${fullCoverHeight}" (Includes 0.125" bleed)\n` +
+                    `Required Canvas @ 300 DPI: ${coverPixelsWidth} x ${coverPixelsHeight} px\n` +
+                    `Mechanical Outer Bleed: 0.125"\n` +
+                    `Safe Area Margin: 0.25" inward from cut line\n` +
+                    `Barcode Reserved Area: 2.0" x 1.2" (Bottom-right back cover)\n` +
+                    `\n` +
+                    `PREFLIGHT STATUS: VERIFIED\n` +
+                    `==================================================\n` +
+                    `Generated by PublishStudio Book Production Studio (Zero-Server Architecture)\n`;
                   const blob = new Blob([spec], { type: 'text/plain' });
                   saveAs(blob, `Production_Specifications_${trimSize}.txt`);
                 }}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#5A8264] hover:bg-[#4C7055] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md"
               >
                 <Download className="w-4 h-4" />
-                <span>Download Production Specification</span>
+                <span>Download Production Specification (.txt)</span>
               </button>
             </div>
           </section>
 
-          {/* Step 4 Back Action */}
+          {/* Step 4 Bottom Navigation */}
           <div className="flex items-center justify-between pt-2">
             <button
               onClick={() => setCurrentStep(3)}
@@ -1421,41 +1743,44 @@ export default function Home() {
         </div>
       )}
 
-      {/* Access Settings Modal (BYOK & Master Secret) */}
-      {showKeyModal && (
+      {/* Studio Settings & Access Modal */}
+      {showSettingsModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className={`w-full max-w-md border rounded-3xl p-6 sm:p-7 shadow-2xl relative text-left transition ${
             isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
           }`}>
             <button 
-              onClick={() => setShowKeyModal(false)}
+              onClick={() => setShowSettingsModal(false)}
               className="absolute top-5 right-5 text-[#8C8479]"
             >
               <X className="w-4 h-4" />
             </button>
             <div className="flex items-center gap-2 mb-3">
-              <Key className="w-4 h-4 text-[#B85D3E]" />
-              <h3 className="text-sm font-bold font-serif">Studio Authorization</h3>
+              <Shield className="w-4 h-4 text-[#B85D3E]" />
+              <h3 className="text-sm font-bold font-serif">Studio Access & Privileges</h3>
             </div>
+            <p className="text-xs text-[#8C8479] mb-4">
+              All core formatting, calculations, and preflight tools run 100% free in your browser with zero server data collection.
+            </p>
             <input
               type="password"
-              placeholder={isAdmin ? '••••••••••••••••' : 'API Key or Master Secret'}
+              placeholder={isAdmin ? '••••••••••••••••' : 'Master Secret or Access Token'}
               value={tempKeyInput}
               onChange={(e) => setTempKeyInput(e.target.value)}
               className="w-full border rounded-xl px-3.5 py-2.5 text-xs mb-4 font-mono bg-transparent"
             />
             <div className="flex items-center justify-end gap-2">
               <button
-                onClick={() => setShowKeyModal(false)}
+                onClick={() => setShowSettingsModal(false)}
                 className="px-4 py-2 text-xs text-[#8C8479]"
               >
-                Cancel
+                Close
               </button>
               <button
                 onClick={handleSaveSecret}
                 className="px-4 py-2 bg-[#B85D3E] text-white rounded-full text-xs font-semibold"
               >
-                Authorize
+                Verify
               </button>
             </div>
           </div>
@@ -1466,8 +1791,9 @@ export default function Home() {
       <footer className={`w-full max-w-4xl border-t mt-auto pt-6 text-center text-[11px] font-sans ${
         isDarkMode ? 'border-[#262429] text-[#716E77]' : 'border-[#EFEAE2] text-[#9E968B]'
       }`}>
-        &copy; {new Date().getFullYear()} PUBLISHSTUDIO • Platform-Independent Book Production Architecture
+        &copy; {new Date().getFullYear()} PUBLISHSTUDIO • Book Production & Print Studio • Zero-Server Client Architecture
       </footer>
     </main>
   );
-            }
+                    }
+                

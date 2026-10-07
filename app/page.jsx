@@ -705,16 +705,16 @@ export default function Home() {
             <BookOpen className="w-5 h-5 text-[#B85D3E] group-hover:scale-105 transition" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-base sm:text-lg font-serif font-bold tracking-tight">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-base sm:text-xl font-serif font-bold tracking-tight text-[#1F1C18] dark:text-white">
                 PUBLISHSTUDIO
               </span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-[#FAF4ED] dark:bg-[#2A1D1A] text-[#B85D3E] dark:text-[#E07A5F] border border-[#E9DFD3] dark:border-[#4A2D25]">
-                Self-Publishing Studio
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full font-semibold bg-[#FAF4ED] text-[#B85D3E] dark:bg-[#2A1D1A] dark:text-[#E07A5F] border border-[#E9DFD3] dark:border-[#4A2D25] tracking-wide">
+                Self-Publishing Supporting Software
               </span>
             </div>
-            <span className="text-[11px] text-[#8C8479] block">
-              Universal Print-on-Demand (POD) Production Engine
+            <span className="text-xs text-[#8C8479] font-medium block mt-0.5">
+              Universal Print-on-Demand (POD)
             </span>
           </div>
         </div>
@@ -723,7 +723,7 @@ export default function Home() {
           {activeView !== 'home' && (
             <button
               onClick={() => setActiveView('home')}
-              className="px-3 py-1.5 rounded-full border text-xs font-sans transition hover:bg-black/5 dark:hover:bg-white/5 text-[#8C8479]"
+              className="px-3 py-1.5 rounded-full border border-[#E8E1D7] dark:border-[#2E2B35] text-xs font-sans transition hover:bg-black/5 dark:hover:bg-white/5 text-[#8C8479]"
             >
               Home Overview
             </button>
@@ -750,18 +750,18 @@ export default function Home() {
         <div className="w-full max-w-5xl flex flex-col gap-8 pb-12 animate-in fade-in duration-300">
           
           {/* Hero Value Section */}
-          <div className="text-center max-w-2xl mx-auto pt-4 sm:pt-8">
-            <span className="text-xs uppercase tracking-widest font-semibold text-[#B85D3E] mb-2 block">
-              Focus More on Writing • Less on Math
+          <div className="text-center max-w-2xl mx-auto pt-4 sm:pt-8 px-2">
+            <span className="text-xs uppercase tracking-widest font-bold text-[#B85D3E] mb-2 block">
+              Universal Print-on-Demand Production
             </span>
-            <h1 className="text-2xl sm:text-4xl font-serif font-bold text-[#1F1C18] dark:text-zinc-100 leading-tight mb-4">
-              Create, Format & Verify Print-Ready Books for Self-Publishing Platforms
+            <h1 className="text-2xl sm:text-4xl font-serif font-bold text-[#1F1C18] dark:text-[#F3F0EB] leading-tight mb-4">
+              Focus More on Writing, Less on Formatting!
             </h1>
             <p className="text-xs sm:text-sm text-[#7A7368] dark:text-[#9E9BA3] leading-relaxed mb-8">
               PublishStudio eliminates printing rejections. We calculate binding gutters, full-wrap spine bulk, and safe margins automatically, leaving you free to craft your story.
             </p>
 
-            {/* Tactile 3D Action Trigger Button */}
+            {/* Tactile 3D Action Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
                 onClick={() => { setActiveView(1); setBookCategory('text_rich'); }}
@@ -773,7 +773,7 @@ export default function Home() {
 
               <button
                 onClick={() => { setActiveView(2); handleLoadSampleManuscript(); }}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 border border-[#DACFBF] dark:border-[#383344] text-[#7A6E5F] dark:text-zinc-300 font-medium text-xs sm:text-sm px-6 py-3.5 rounded-full bg-white dark:bg-[#18161D] shadow-[0_3px_0_0_#D1C4B2] dark:shadow-[0_3px_0_0_#252030] active:translate-y-1 active:shadow-none transition-all"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 border border-[#DACFBF] dark:border-[#383344] text-[#2D2A26] dark:text-zinc-200 font-medium text-xs sm:text-sm px-6 py-3.5 rounded-full bg-white dark:bg-[#1E1B24] shadow-[0_3px_0_0_#DACFBF] dark:shadow-[0_3px_0_0_#2B2533] active:translate-y-1 active:shadow-none transition-all"
               >
                 <PlayCircle className="w-4 h-4 text-[#B85D3E]" />
                 <span>Explore with Demo Book</span>
@@ -781,7 +781,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 3 Pillars Bento Grid (Light 3D Shadow Styling) */}
+          {/* 3 Pillars Bento Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-4">
             
             {/* Card 1: What is this tool? */}
@@ -1090,8 +1090,7 @@ export default function Home() {
                 />
               </div>
             </div>
-
-            {/* Readouts */}
+                      {/* Readouts */}
             <div className={`border rounded-2xl p-4 grid grid-cols-3 gap-2 text-center ${
               isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'
             }`}>
@@ -1113,22 +1112,34 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Step 1 Footer Navigation with 3D button */}
-          <div className="flex items-center justify-between pt-2">
+          {/* Step 1 Pill Navigation */}
+          <div className="flex items-center justify-between pt-4">
             <button
               onClick={() => setActiveView('home')}
-              className="inline-flex items-center gap-1.5 text-xs text-[#8C8479] hover:text-[#1F1C18]"
+              className="inline-flex items-center gap-1.5 text-xs text-[#8C8479] hover:text-[#1F1C18] px-4 py-2 rounded-full border border-transparent hover:border-black/5"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Home Overview</span>
+              <span>Home Overview</span>
             </button>
-            <button
-              onClick={() => setActiveView(2)}
-              className="inline-flex items-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-6 py-3 rounded-full shadow-[0_3px_0_0_#8A3F26] active:translate-y-0.5 active:shadow-none transition-all"
-            >
-              <span>Continue to Step 2: Interior</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+
+            {/* 3D Pill Navigation Button */}
+            <div className="inline-flex items-center rounded-full p-1 bg-white dark:bg-[#1A181E] border border-[#DACFBF] dark:border-[#383344] shadow-[0_3px_0_0_#DACFBF] dark:shadow-[0_3px_0_0_#2B2533]">
+              <button
+                onClick={() => setActiveView('home')}
+                className="inline-flex items-center gap-1 px-4 py-2 rounded-full text-xs font-medium text-[#7A6E5F] dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/5 transition"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back</span>
+              </button>
+              <div className="w-px h-4 bg-[#E0D7C9] dark:bg-[#383344]"></div>
+              <button
+                onClick={() => setActiveView(2)}
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-bold bg-[#B85D3E] hover:bg-[#A35034] text-white shadow-sm transition"
+              >
+                <span>Next: Interior</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1243,8 +1254,7 @@ export default function Home() {
                   )}
                 </div>
               </section>
-
-              {/* BOOK SPREAD PREVIEW (Physical Dynamic Gutter) */}
+                            {/* REALISTIC BOOK SPREAD PREVIEW (Authentic Typeset Prose) */}
               <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
                 isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
               }`}>
@@ -1252,16 +1262,16 @@ export default function Home() {
                   <div className="flex items-center gap-2">
                     <Eye className="w-4 h-4 text-[#B85D3E]" />
                     <h3 className="text-xs font-bold uppercase tracking-wider font-sans">
-                      Two-Page Craft Spread Preview (Interactive Mockup)
+                      Two-Page Craft Spread Preview (Typeset Proof)
                     </h3>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setActiveSpreadPage(Math.max(2, activeSpreadPage - 2))}
                       disabled={activeSpreadPage <= 2}
-                      className="text-[10px] px-2 py-0.5 rounded border disabled:opacity-40 font-mono"
+                      className="text-[10px] px-2.5 py-1 rounded border disabled:opacity-40 font-mono shadow-sm bg-white dark:bg-[#201E26]"
                     >
-                      ◄ Prev
+                      ◄ Prev Spread
                     </button>
                     <span className="text-[10px] font-mono text-[#8C8479]">
                       Pages {activeSpreadPage}-{activeSpreadPage + 1} of {activeEffectivePages}
@@ -1269,102 +1279,110 @@ export default function Home() {
                     <button
                       onClick={() => setActiveSpreadPage(Math.min(activeEffectivePages - 1, activeSpreadPage + 2))}
                       disabled={activeSpreadPage >= activeEffectivePages - 1}
-                      className="text-[10px] px-2 py-0.5 rounded border disabled:opacity-40 font-mono"
+                      className="text-[10px] px-2.5 py-1 rounded border disabled:opacity-40 font-mono shadow-sm bg-white dark:bg-[#201E26]"
                     >
-                      Next ►
+                      Next Spread ►
                     </button>
                   </div>
                 </div>
 
-                <div className={`w-full rounded-2xl border p-4 sm:p-6 flex items-center justify-center overflow-x-auto ${
-                  isDarkMode ? 'bg-[#100F12] border-[#26242D]' : 'bg-[#F2EEE9] border-[#E5DDD2]'
+                <div className={`w-full rounded-2xl border p-4 sm:p-7 flex items-center justify-center overflow-x-auto ${
+                  isDarkMode ? 'bg-[#100F12] border-[#26242D]' : 'bg-[#EFEAE2] border-[#DDD5C7]'
                 }`}>
-                  <div className="flex items-center shadow-2xl rounded-sm overflow-hidden select-none border border-black/10">
+                  <div className="flex items-stretch shadow-2xl rounded-sm overflow-hidden select-none border border-black/15 bg-[#FAF7F2]">
                     
-                    {/* Left Page (Verso) */}
+                    {/* Left Page (Verso - Even Page) */}
                     <div 
-                      className="w-[145px] sm:w-[190px] aspect-[1/1.45] bg-[#FAF8F5] text-[#2D2A26] flex flex-col justify-between p-3 sm:p-4 border-r border-[#E8E2D8] relative"
+                      className="w-[160px] sm:w-[220px] aspect-[1/1.5] bg-[#FFFDF9] text-[#24211D] flex flex-col justify-between p-3.5 sm:p-5 border-r border-[#E8E2D8] relative"
                       style={{
-                        paddingLeft: `${outsideMargin * 28}px`,
-                        paddingRight: `${gutter * 28}px`,
+                        paddingLeft: `${outsideMargin * 32}px`,
+                        paddingRight: `${gutter * 32}px`,
                       }}
                     >
-                      <div className="text-center border-b border-black/10 pb-1">
-                        <span className="text-[7px] sm:text-[8px] font-serif uppercase tracking-widest text-[#7A7570] truncate block">
+                      {/* Running Header */}
+                      <div className="text-center border-b border-black/10 pb-1.5 mb-2">
+                        <span className="text-[8px] sm:text-[9px] font-serif uppercase tracking-widest text-[#7A7570] truncate block">
                           {authorName || 'AUTHOR NAME'}
                         </span>
                       </div>
 
-                      <div className="space-y-1.5 my-auto opacity-75">
-                        <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
-                        <div className="h-1 bg-[#D8D2C7] rounded w-5/6"></div>
-                        <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
-                        <div className="h-1 bg-[#D8D2C7] rounded w-4/5"></div>
-                        <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
-                        <div className="h-1 bg-[#D8D2C7] rounded w-3/4"></div>
+                      {/* Actual Book Content */}
+                      <div className="text-[7px] sm:text-[9px] font-serif leading-relaxed text-[#2C2824] space-y-2 overflow-hidden text-justify">
+                        <p className="indent-3">
+                          The stillness of the study was broken only by the clock on the mantelpiece. Outside, rain fell steadily against the tall glass panes, blurring the lamps along the quiet avenue into soft circles of amber.
+                        </p>
+                        <p className="indent-3">
+                          He dipped the nib of his pen into the dark ink, pausing to listen to the carriage wheels rolling across the wet cobblestones below. Every manuscript began this way—not with certainty, but with the quiet discipline of facing an empty sheet.
+                        </p>
+                        <p className="indent-3">
+                          The margins preserved the words, keeping the inner voice protected from the binding.
+                        </p>
                       </div>
 
-                      <div className="text-left pt-1 border-t border-black/5">
-                        <span className="text-[7px] sm:text-[8px] font-mono text-[#8C8479]">{activeSpreadPage}</span>
+                      {/* Folio */}
+                      <div className="text-left pt-1.5 border-t border-black/5 mt-auto">
+                        <span className="text-[8px] font-mono text-[#8C8479]">{activeSpreadPage}</span>
                       </div>
                     </div>
 
                     {/* Spine Shadow */}
-                    <div className="w-[6px] sm:w-[8px] h-full bg-gradient-to-r from-black/25 via-black/10 to-black/25 z-10 self-stretch"></div>
+                    <div className="w-[8px] sm:w-[12px] bg-gradient-to-r from-black/30 via-black/10 to-black/30 z-10 self-stretch"></div>
 
-                    {/* Right Page (Recto) */}
+                    {/* Right Page (Recto - Odd Page) */}
                     <div 
-                      className="w-[145px] sm:w-[190px] aspect-[1/1.45] bg-[#FAF8F5] text-[#2D2A26] flex flex-col justify-between p-3 sm:p-4 border-l border-[#E8E2D8] relative"
+                      className="w-[160px] sm:w-[220px] aspect-[1/1.5] bg-[#FFFDF9] text-[#24211D] flex flex-col justify-between p-3.5 sm:p-5 border-l border-[#E8E2D8] relative"
                       style={{
-                        paddingLeft: `${gutter * 28}px`,
-                        paddingRight: `${outsideMargin * 28}px`,
+                        paddingLeft: `${gutter * 32}px`,
+                        paddingRight: `${outsideMargin * 32}px`,
                       }}
                     >
-                      <div className="text-center border-b border-black/10 pb-1">
-                        <span className="text-[7px] sm:text-[8px] font-serif uppercase tracking-widest text-[#7A7570] truncate block">
+                      {/* Running Header */}
+                      <div className="text-center border-b border-black/10 pb-1.5 mb-2">
+                        <span className="text-[8px] sm:text-[9px] font-serif uppercase tracking-widest text-[#7A7570] truncate block">
                           {bookTitle || 'TITLE OF THE WORK'}
                         </span>
                       </div>
 
                       {activeSpreadPage === 2 ? (
-                        <div className="my-auto">
-                          <div className="text-center mb-2">
-                            <span className="text-[6px] sm:text-[7px] uppercase tracking-widest text-[#B85D3E] font-semibold block">
+                        /* Chapter Opener Page */
+                        <div className="text-[7px] sm:text-[9px] font-serif leading-relaxed text-[#2C2824]">
+                          <div className="text-center my-2">
+                            <span className="text-[7px] sm:text-[8px] uppercase tracking-widest text-[#B85D3E] font-sans font-bold block mb-0.5">
                               Chapter One
                             </span>
-                            <span className="text-[8px] sm:text-[9px] font-serif font-bold text-[#1F1C18]">
-                              The Opening
+                            <span className="text-[9px] sm:text-[11px] font-serif font-bold text-[#1F1C18] block">
+                              The Opening Chapter
                             </span>
+                            <div className="w-6 h-px bg-[#B85D3E]/40 mx-auto mt-1 mb-2"></div>
                           </div>
 
-                          <div className="flex items-start gap-1 mb-1.5">
-                            <span className="text-sm sm:text-base font-serif font-bold leading-none text-[#1F1C18]">
+                          <p className="text-justify leading-relaxed">
+                            <span className="float-left text-2xl sm:text-3xl font-serif font-bold leading-none pr-1.5 pt-0.5 text-[#B85D3E]">
                               O
                             </span>
-                            <div className="space-y-1 w-full pt-0.5">
-                              <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
-                              <div className="h-1 bg-[#D8D2C7] rounded w-5/6"></div>
-                            </div>
-                          </div>
-                          <div className="space-y-1.5 opacity-75">
-                            <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
-                            <div className="h-1 bg-[#D8D2C7] rounded w-4/5"></div>
-                            <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
-                          </div>
+                            ne never truly forgets the opening page of a journey. The scent of fresh paper stock, the smooth resistance of the spine, and the balanced margins invite the reader into a world crafted entirely from thought and ink.
+                          </p>
+                          <p className="indent-3 text-justify mt-1.5 leading-relaxed">
+                            A properly formatted book respects both the eyes of the reader and the physical machinery of the bindery.
+                          </p>
                         </div>
                       ) : (
-                        <div className="space-y-1.5 my-auto opacity-75">
-                          <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
-                          <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
-                          <div className="h-1 bg-[#D8D2C7] rounded w-4/5"></div>
-                          <div className="h-1 bg-[#D8D2C7] rounded w-full"></div>
-                          <div className="h-1 bg-[#D8D2C7] rounded w-5/6"></div>
-                          <div className="h-1 bg-[#D8D2C7] rounded w-3/4"></div>
+                        /* Standard Narrative Body Page */
+                        <div className="text-[7px] sm:text-[9px] font-serif leading-relaxed text-[#2C2824] space-y-2 overflow-hidden text-justify">
+                          <p className="indent-3">
+                            The evening deepened without further interruption. Page after page turned smoothly, each paragraph resting comfortably within the calibrated print boundaries.
+                          </p>
+                          <p className="indent-3">
+                            When an author focuses on the story rather than struggling with decimal measurements, the prose flows with natural clarity and purpose.
+                          </p>
+                          <p className="indent-3">
+                            The chapter closed just as the streetlights flickered out against the approaching dawn.
+                          </p>
                         </div>
                       )}
-
-                      <div className="text-right pt-1 border-t border-black/5">
-                        <span className="text-[7px] sm:text-[8px] font-mono text-[#8C8479]">{activeSpreadPage + 1}</span>
+                                            {/* Folio */}
+                      <div className="text-right pt-1.5 border-t border-black/5 mt-auto">
+                        <span className="text-[8px] font-mono text-[#8C8479]">{activeSpreadPage + 1}</span>
                       </div>
                     </div>
 
@@ -1372,7 +1390,7 @@ export default function Home() {
                 </div>
 
                 <p className="text-[10px] text-center text-[#8C8479] mt-3 font-sans">
-                  POD binding gutter: {gutter}" dynamically widening/narrowing with page extent.
+                  Live POD layout rendering: {gutter}" binding gutter calibrated for {activeEffectivePages} pages.
                 </p>
               </section>
 
@@ -1432,8 +1450,7 @@ export default function Home() {
               )}
             </div>
           )}
-
-          {interiorSubMode === 'visual_strip' && (
+                    {interiorSubMode === 'visual_strip' && (
             <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
               isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
             }`}>
@@ -1483,7 +1500,7 @@ export default function Home() {
             </section>
           )}
 
-           {interiorSubMode === 'planner_docx' && (
+          {interiorSubMode === 'planner_docx' && (
             <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
               isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
             }`}>
@@ -1518,21 +1535,25 @@ export default function Home() {
             </section>
           )}
 
-          <div className="flex items-center justify-between pt-2">
-            <button
-              onClick={() => setActiveView(1)}
-              className="inline-flex items-center gap-1.5 text-xs text-[#8C8479]"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Step 1: Setup</span>
-            </button>
-            <button
-              onClick={() => setActiveView(3)}
-              className="inline-flex items-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-6 py-3 rounded-full shadow-[0_3px_0_0_#8A3F26] active:translate-y-0.5 active:shadow-none transition-all"
-            >
-              <span>Continue to Step 3: Cover</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+          {/* Step 2 Pill Navigation */}
+          <div className="flex items-center justify-end pt-4">
+            <div className="inline-flex items-center rounded-full p-1 bg-white dark:bg-[#1A181E] border border-[#DACFBF] dark:border-[#383344] shadow-[0_3px_0_0_#DACFBF] dark:shadow-[0_3px_0_0_#2B2533]">
+              <button
+                onClick={() => setActiveView(1)}
+                className="inline-flex items-center gap-1 px-4 py-2 rounded-full text-xs font-medium text-[#7A6E5F] dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/5 transition"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back</span>
+              </button>
+              <div className="w-px h-4 bg-[#E0D7C9] dark:bg-[#383344]"></div>
+              <button
+                onClick={() => setActiveView(3)}
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-bold bg-[#B85D3E] hover:bg-[#A35034] text-white shadow-sm transition"
+              >
+                <span>Next: Cover</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1603,21 +1624,25 @@ export default function Home() {
             </div>
           </section>
 
-          <div className="flex items-center justify-between pt-2">
-            <button
-              onClick={() => setActiveView(2)}
-              className="inline-flex items-center gap-1.5 text-xs text-[#8C8479]"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Step 2: Interior</span>
-            </button>
-            <button
-              onClick={() => setActiveView(4)}
-              className="inline-flex items-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-6 py-3 rounded-full shadow-[0_3px_0_0_#8A3F26] active:translate-y-0.5 active:shadow-none transition-all"
-            >
-              <span>Continue to Step 4: Preflight</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+          {/* Step 3 Pill Navigation */}
+          <div className="flex items-center justify-end pt-4">
+            <div className="inline-flex items-center rounded-full p-1 bg-white dark:bg-[#1A181E] border border-[#DACFBF] dark:border-[#383344] shadow-[0_3px_0_0_#DACFBF] dark:shadow-[0_3px_0_0_#2B2533]">
+              <button
+                onClick={() => setActiveView(2)}
+                className="inline-flex items-center gap-1 px-4 py-2 rounded-full text-xs font-medium text-[#7A6E5F] dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/5 transition"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back</span>
+              </button>
+              <div className="w-px h-4 bg-[#E0D7C9] dark:bg-[#383344]"></div>
+              <button
+                onClick={() => setActiveView(4)}
+                className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-bold bg-[#B85D3E] hover:bg-[#A35034] text-white shadow-sm transition"
+              >
+                <span>Next: Preflight</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1814,15 +1839,17 @@ export default function Home() {
               </button>
             </div>
           </section>
-
-          <div className="flex items-center justify-between pt-2">
-            <button
-              onClick={() => setActiveView(3)}
-              className="inline-flex items-center gap-1.5 text-xs text-[#8C8479]"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Step 3: Cover</span>
-            </button>
+                    {/* Step 4 Pill Navigation */}
+          <div className="flex items-center justify-start pt-4">
+            <div className="inline-flex items-center rounded-full p-1 bg-white dark:bg-[#1A181E] border border-[#DACFBF] dark:border-[#383344] shadow-[0_3px_0_0_#DACFBF] dark:shadow-[0_3px_0_0_#2B2533]">
+              <button
+                onClick={() => setActiveView(3)}
+                className="inline-flex items-center gap-1 px-5 py-2 rounded-full text-xs font-medium text-[#7A6E5F] dark:text-zinc-300 hover:bg-black/5 dark:hover:bg-white/5 transition"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to Step 3: Cover</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1901,8 +1928,9 @@ export default function Home() {
       <footer className={`w-full max-w-5xl border-t mt-auto pt-6 text-center text-[11px] font-sans ${
         isDarkMode ? 'border-[#262429] text-[#716E77]' : 'border-[#EFEAE2] text-[#9E968B]'
       }`}>
-        &copy; {new Date().getFullYear()} PUBLISHSTUDIO • Book Production & Print Studio • Universal POD Standards • Zero-Server Client Architecture
+        &copy; {new Date().getFullYear()} PUBLISHSTUDIO • Universal Print-on-Demand (POD) • Self-Publishing Supporting Software • Zero-Server Client Architecture
       </footer>
     </main>
   );
 }
+      

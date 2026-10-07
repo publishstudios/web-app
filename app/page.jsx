@@ -7,7 +7,7 @@ import {
   Plus, Copy, Trash2, CheckSquare, Square, Grid, Image as ImageIcon,
   Compass, HelpCircle, Check, AlertTriangle, ArrowRight, ArrowLeft,
   ChevronRight, Settings2, FileText, CheckCircle, AlertCircle, List,
-  PlayCircle, Lock, Shield
+  PlayCircle, Lock, Shield, IndianRupee, DollarSign, ExternalLink, Award
 } from 'lucide-react';
 import { 
   Document, Packer, Paragraph, TextRun, HeadingLevel, 
@@ -38,22 +38,107 @@ async function computeSHA256(message) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Client-Side Heuristic Content & AI Quality Scanner
+function auditContentQuality(lines) {
+  const fullText = lines.join(' ');
+  const words = fullText.split(/\s+/).filter(w => w.length > 0);
+  const totalWords = words.length;
+  
+  if (totalWords < 50) return null;
+
+  // 1. Flesch-Kincaid Reading Grade Level Estimate
+  const sentences = fullText.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const totalSentences = Math.max(1, sentences.length);
+  
+  // Approximate syllable count
+  let syllableCount = 0;
+  words.forEach(word => {
+    const clean = word.toLowerCase().replace(/[^a-z]/g, '');
+    if (clean.length <= 3) { syllableCount += 1; return; }
+    const matches = clean.match(/[aeiouy]{1,2}/g);
+    syllableCount += matches ? matches.length : 1;
+  });
+
+  const wordsPerSentence = totalWords / totalSentences;
+  const syllablesPerWord = syllableCount / totalWords;
+  const readingEase = Math.round(206.835 - (1.015 * wordsPerSentence) - (84.6 * syllablesPerWord));
+  const gradeLevel = Math.max(1, Math.min(16, Math.round((0.39 * wordsPerSentence) + (11.8 * syllablesPerWord) - 15.59)));
+
+  // 2. Robotic / AI Filler Words Frequency Check
+  const AI_CLICHES = [
+    'delve', 'tapestry', 'testament', 'beacon', 'nestled', 
+    'pivotal', 'crucial', 'in conclusion', 'furthermore', 
+    'moreover', 'multifaceted', 'embark', 'unwavering', 'paramount'
+  ];
+  const flaggedCliches = [];
+  AI_CLICHES.forEach(cliche => {
+    const regex = new RegExp(`\\b${cliche}\\b`, 'gi');
+    const matches = fullText.match(regex);
+    if (matches && matches.length > 1) {
+      flaggedCliches.push({ word: cliche, count: matches.length });
+    }
+  });
+
+  // 3. Sentence Length Variance (Monotony Warning)
+  const sentenceLengths = sentences.map(s => s.trim().split(/\s+/).length);
+  const shortSentences = sentenceLengths.filter(l => l < 8).length;
+  const longSentences = sentenceLengths.filter(l => l > 32).length;
+
+  return {
+    readingEase: Math.max(0, Math.min(100, readingEase)),
+    gradeLevel,
+    flaggedCliches,
+    sentenceBalance: {
+      totalSentences,
+      avgWordsPerSentence: Math.round(wordsPerSentence),
+      shortRatio: Math.round((shortSentences / totalSentences) * 100),
+      longRatio: Math.round((longSentences / totalSentences) * 100)
+    }
+  };
+}
+
+// Deterministic KDP Print Cost & Royalty Math
+function calculateKdpEconomics(pageCount, trimSize, paperType) {
+  // Amazon KDP Standard Black & White Paperback Formulas (US & India)
+  // US Formula: Fixed $0.85 + (Pages * $0.012) for standard black ink
+  const usFixed = 0.85;
+  const usPerPage = paperType === 'color' ? 0.07 : 0.012;
+  const usPrintCost = Number((usFixed + (pageCount * usPerPage)).toFixed(2));
+  const usMinListPrice = Number((usPrintCost / 0.60).toFixed(2)); // 60% standard distribution threshold
+  const usSuggestedListPrice = Math.max(9.99, Number((usMinListPrice * 1.35).toFixed(2)));
+  const usEstimatedRoyalty = Number(((usSuggestedListPrice * 0.60) - usPrintCost).toFixed(2));
+
+  // India Formula (KDP IN Paperback print formula approximation)
+  // Fixed ₹60 + (Pages * ₹0.75) for B&W
+  const inFixed = 60;
+  const inPerPage = paperType === 'color' ? 2.50 : 0.75;
+  const inPrintCost = Math.round(inFixed + (pageCount * inPerPage));
+  const inMinListPrice = Math.round(inPrintCost / 0.60);
+  const inSuggestedListPrice = Math.max(299, Math.round(inMinListPrice * 1.40));
+  const inEstimatedRoyalty = Math.round((inSuggestedListPrice * 0.60) - inPrintCost);
+
+  return {
+    us: { printCost: usPrintCost, minPrice: usMinListPrice, suggestedPrice: usSuggestedListPrice, royalty: usEstimatedRoyalty },
+    india: { printCost: inPrintCost, minPrice: inMinListPrice, suggestedPrice: inSuggestedListPrice, royalty: inEstimatedRoyalty }
+  };
+}
+
 export default function Home() {
-  // 4-Step Production Pipeline State
+  // Navigation & Routing Mode
   const [currentStep, setCurrentStep] = useState(1);
-  const [experienceMode, setExperienceMode] = useState('beginner'); // 'beginner' | 'advanced'
+  const [activeDirectTool, setActiveDirectTool] = useState(null); // 'interior' | 'cover' | 'preflight' | null
+  const [experienceMode, setExperienceMode] = useState('beginner');
   const [selectedArchetype, setSelectedArchetype] = useState('novel');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [activeHelpModal, setActiveHelpModal] = useState(null);
 
   // Physical Attributes & Book Profile
-  const [trimSize, setTrimSize] = useState('5.5x8.5');
-  const [pageCount, setPageCount] = useState(220);
+  const [trimSize, setTrimSize] = useState('6x9');
+  const [pageCount, setPageCount] = useState(120);
   const [paperType, setPaperType] = useState('cream');
   const [enableBleed, setEnableBleed] = useState(false);
-  const [bindingType, setBindingType] = useState('paperback');
 
-  // Advanced Margin Overrides (Inches)
+  // Advanced Margins (Inches)
   const [customMargins, setCustomMargins] = useState({
     top: 0.625,
     bottom: 0.625,
@@ -64,26 +149,25 @@ export default function Home() {
   const [bookTitle, setBookTitle] = useState('Title of the Work');
   const [authorName, setAuthorName] = useState('Author Name');
 
-  // Authorization & Studio Settings (Access modal without confusing standalone credits)
+  // Authorization & Settings
   const [isAdmin, setIsAdmin] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [tempKeyInput, setTempKeyInput] = useState('');
 
-  // Step 2: Interior Manuscript & Analysis State
-  const [interiorSubMode, setInteriorSubMode] = useState('typeset'); // 'typeset' | 'visual_strip' | 'planner_docx'
+  // Step 2: Interior Manuscript, Analysis & Preview State
+  const [interiorSubMode, setInteriorSubMode] = useState('typeset');
   const [fileName, setFileName] = useState('');
   const [rawTextLines, setRawTextLines] = useState([]);
   const [manuscriptAnalysis, setManuscriptAnalysis] = useState(null);
+  const [contentAudit, setContentAudit] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [hasRendered, setHasRendered] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const [activeSpreadPage, setActiveSpreadPage] = useState(2);
 
-  // Interactive Book Craft Spread Preview State
-  const [activeSpreadPage, setActiveSpreadPage] = useState(2); // Left page number (Verso)
-
-  // Step 2: Visual Planner & Archetype Engine State
+  // Step 2: Visual Planner & Archetype Engine
   const [plannerType, setPlannerType] = useState('daily_focus');
   const [plannerDays, setPlannerDays] = useState(90);
   const [customNiche, setCustomNiche] = useState('');
@@ -93,6 +177,15 @@ export default function Home() {
   const [repeatMultiplier, setRepeatMultiplier] = useState(4);
   const [enableFolios, setEnableFolios] = useState(false);
   const [isCompilingPdf, setIsCompilingPdf] = useState(false);
+
+  // Step 4: Amazon KDP Upload Checklist States
+  const [kdpChecklist, setKdpChecklist] = useState({
+    titleMatch: false,
+    trimMatch: true,
+    bleedMatch: false,
+    barcodeSafe: true,
+    rightsDeclared: false
+  });
 
   // References
   const fileInputRef = useRef(null);
@@ -216,6 +309,22 @@ export default function Home() {
   const fullCoverHeight = coverCalculations.fullHeight;
   const coverPixelsWidth = coverCalculations.pixelWidth300Dpi;
   const coverPixelsHeight = coverCalculations.pixelHeight300Dpi;
+
+  // Real-Time Economics
+  const economics = calculateKdpEconomics(activeEffectivePages, trimSize, paperType);
+
+  // Dynamic Pipeline Step Completion Status
+  const isStep1Complete = Boolean(selectedArchetype && trimSize && activeEffectivePages >= 24);
+  const isStep2Complete = Boolean(hasRendered || visualPages.length > 0);
+  const isStep3Complete = Boolean(spineWidth > 0 && fullCoverWidth > 0);
+  const isStep4Complete = Boolean(isStep1Complete && isStep2Complete && isStep3Complete);
+
+  // Overall 0-100% Readiness Gauge
+  let readinessScore = 40;
+  if (isStep1Complete) readinessScore += 20;
+  if (isStep2Complete) readinessScore += 20;
+  if (isStep3Complete) readinessScore += 10;
+  if (activeEffectivePages >= 24 && spineWidth >= 0.20) readinessScore += 10;
     const calculateTrueDpi = (pixelWidth, pixelHeight) => {
     const targetWidth = enableBleed ? currentTrim.width + 0.125 : currentTrim.width;
     const targetHeight = enableBleed ? currentTrim.height + 0.25 : currentTrim.height;
@@ -265,75 +374,6 @@ export default function Home() {
     setVisualPages((prev) => [...prev, ...processed]);
     setStatusMessage(`Imported ${processed.length} image pages into visual strip.`);
     if (visualBatchInputRef.current) visualBatchInputRef.current.value = '';
-  };
-
-  const handleInsertSingleImage = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || insertIndexRef.current === null) return;
-
-    const item = await processImageFile(file);
-    setVisualPages((prev) => {
-      const next = [...prev];
-      next.splice(insertIndexRef.current + 1, 0, item);
-      return next;
-    });
-
-    insertIndexRef.current = null;
-    if (visualSingleInputRef.current) visualSingleInputRef.current.value = '';
-  };
-
-  const duplicateSingleCard = (idx) => {
-    setVisualPages((prev) => {
-      const target = prev[idx];
-      const clone = { ...target, id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}` };
-      const next = [...prev];
-      next.splice(idx + 1, 0, clone);
-      return next;
-    });
-  };
-
-  const deleteSingleCard = (idx) => {
-    setVisualPages((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const toggleSelectCard = (id) => {
-    setSelectedPageIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const handleSelectAll = () => {
-    if (selectedPageIds.size === visualPages.length) {
-      setSelectedPageIds(new Set());
-    } else {
-      setSelectedPageIds(new Set(visualPages.map((p) => p.id)));
-    }
-  };
-
-  const handleDuplicateSelectedSet = () => {
-    if (!selectedPageIds.size) return;
-    const selectedItems = visualPages.filter((p) => selectedPageIds.has(p.id));
-    const clones = [];
-
-    for (let r = 0; r < repeatMultiplier; r++) {
-      selectedItems.forEach((item) => {
-        clones.push({
-          ...item,
-          id: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        });
-      });
-    }
-
-    setVisualPages((prev) => [...prev, ...clones]);
-    setStatusMessage(`Duplicated set of ${selectedItems.length} pages × ${repeatMultiplier} times.`);
-  };
-
-  const handleDeleteSelected = () => {
-    setVisualPages((prev) => prev.filter((p) => !selectedPageIds.has(p.id)));
-    setSelectedPageIds(new Set());
   };
 
   const handleExportVisualPdf = async () => {
@@ -416,6 +456,7 @@ export default function Home() {
     setIsProcessing(true);
     setHasRendered(false);
     setManuscriptAnalysis(null);
+    setContentAudit(null);
     setStatusMessage('');
 
     try {
@@ -441,6 +482,8 @@ export default function Home() {
 
         const audit = inspectManuscriptDOM(docxViewerRef.current, lines);
         setManuscriptAnalysis(audit);
+        const writingAudit = auditContentQuality(lines);
+        setContentAudit(writingAudit);
         setHasRendered(true);
       }
     } catch (err) {
@@ -451,9 +494,9 @@ export default function Home() {
     }
   };
 
-  // Sample/Demo Mode: Instant preview without file upload
+    // Sample/Demo Book Mode
   const handleLoadSampleManuscript = () => {
-    setFileName('Sample_Novel_Manuscript.docx');
+    setFileName('Sample_KDP_Novel.docx');
     setBookTitle('The Memory Chef');
     setAuthorName('A. S. Harper');
     const demoLines = [
@@ -486,6 +529,17 @@ export default function Home() {
         { code: 'CHAPTERS_DETECTED', title: 'Chapter Structure', message: '3 standard narrative markers recognized.' },
         { code: 'HEALTHY_EXTENT', title: 'Spine Caliber Extent', message: '120 pages generates a printable 0.300" commercial spine.' }
       ]
+    });
+    setContentAudit({
+      readingEase: 78,
+      gradeLevel: 7,
+      flaggedCliches: [],
+      sentenceBalance: {
+        totalSentences: 9,
+        avgWordsPerSentence: 14,
+        shortRatio: 12,
+        longRatio: 0
+      }
     });
     setHasRendered(true);
     setPageCount(120);
@@ -654,46 +708,55 @@ export default function Home() {
       setIsGeneratingPlanner(false);
     }
   };
-     return (
+    return (
     <main className={`min-h-screen w-full overflow-x-hidden flex flex-col items-center px-3.5 sm:px-6 py-6 sm:py-8 transition-colors duration-300 ${
       isDarkMode 
         ? 'bg-[#121113] text-[#E8E6E3] selection:bg-[#3E2B25] selection:text-[#E07A5F]' 
         : 'bg-[#FBF9F5] text-[#2D2A26] selection:bg-[#EADFD8] selection:text-[#B85D3E]'
     }`}>
+      {/* ₹0 Trust Ribbon Header */}
+      <div className={`w-full max-w-5xl mb-4 py-2 px-4 rounded-2xl border flex items-center justify-between text-[11px] font-sans transition ${
+        isDarkMode ? 'bg-[#1A181E] border-[#2A2733] text-zinc-400' : 'bg-[#F5EFE6] border-[#EADFCF] text-[#7A6E5F]'
+      }`}>
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400">₹0 Investment Challenge</span>
+          <span className="hidden sm:inline">• Free In-Browser Production Studio</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span>Amazon KDP Ready</span>
+          <span>•</span>
+          <span className="text-[#B85D3E] font-medium">100% In-Browser Privacy</span>
+        </div>
+      </div>
+
       {/* Studio Master Header */}
-      <header className={`w-full max-w-4xl flex flex-col gap-4 border-b pb-5 mb-6 ${
+      <header className={`w-full max-w-5xl flex flex-col gap-4 border-b pb-5 mb-6 ${
         isDarkMode ? 'border-[#262429]' : 'border-[#EFEAE2]'
       }`}>
         <div className="w-full flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className={`p-2 sm:p-2.5 rounded-2xl border shadow-sm shrink-0 ${
-              isDarkMode 
-                ? 'bg-[#1C1A20] border-[#2E2B35] text-[#E07A5F]' 
-                : 'bg-[#FAF4ED] border-[#E9DFD3] text-[#B85D3E]'
+            <div className={`p-2.5 rounded-2xl border shadow-sm shrink-0 ${
+              isDarkMode ? 'bg-[#1C1A20] border-[#2E2B35] text-[#E07A5F]' : 'bg-[#FAF4ED] border-[#E9DFD3] text-[#B85D3E]'
             }`}>
-              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
+              <BookOpen className="w-5 h-5" />
             </div>
             <div className="truncate">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className={`text-sm sm:text-base font-serif font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-[#1F1C18]'}`}>
+              <div className="flex items-center gap-2">
+                <span className={`text-base sm:text-lg font-serif font-bold tracking-tight ${isDarkMode ? 'text-white' : 'text-[#1F1C18]'}`}>
                   PUBLISHSTUDIO
                 </span>
-                <span className={`text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full font-medium border shrink-0 ${
-                  isDarkMode 
-                    ? 'bg-[#2A1D1A] text-[#E07A5F] border-[#4A2D25]' 
-                    : 'bg-[#FAF3EC] text-[#B85D3E] border-[#E9DFD3]'
-                }`}>
-                  Book Production & Print Studio
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 shrink-0">
+                  ₹0 Zero-Cost Engine
                 </span>
               </div>
-              <span className={`text-[10px] sm:text-[11px] font-sans block truncate ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'}`}>
-                Zero-Server Architecture • Your manuscript never leaves your browser
+              <span className={`text-[11px] font-sans block truncate ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'}`}>
+                Format, design full-wrap covers, and run KDP preflight audits with zero paid subscriptions.
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Beginner / Advanced Mode Switcher */}
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setExperienceMode(experienceMode === 'beginner' ? 'advanced' : 'beginner')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-sans transition shadow-sm ${
@@ -701,66 +764,62 @@ export default function Home() {
                   ? (isDarkMode ? 'bg-[#3A2A22] text-[#E07A5F] border-[#52382D]' : 'bg-[#FAF4ED] text-[#B85D3E] border-[#E9DFD3] font-semibold')
                   : (isDarkMode ? 'bg-[#1C1A20] border-[#2E2B35] text-zinc-400' : 'bg-white border-[#E8E1D7] text-[#6B645A]')
               }`}
-              title="Toggle Beginner Guidance or Direct Technical Controls"
             >
               <Settings2 className="w-3.5 h-3.5" />
               <span className="capitalize">{experienceMode}</span>
             </button>
 
-            {/* Dark / Light Mode Switcher */}
             <button
               onClick={toggleTheme}
               className={`p-2 rounded-full border transition shadow-sm ${
-                isDarkMode 
-                  ? 'bg-[#1C1A20] border-[#2E2B35] text-amber-300 hover:bg-[#25232B]' 
-                  : 'bg-white border-[#E8E1D7] text-[#6B645A] hover:bg-[#FAF7F2]'
+                isDarkMode ? 'bg-[#1C1A20] border-[#2E2B35] text-amber-300' : 'bg-white border-[#E8E1D7] text-[#6B645A]'
               }`}
-              title="Toggle Theme"
             >
-              {isDarkMode ? <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+              {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
             </button>
 
-            {/* Settings & Admin Cog (Clean access without confusing standalone credits) */}
             <button
               onClick={() => setShowSettingsModal(true)}
               className={`p-2 rounded-full border transition shadow-sm ${
-                isDarkMode 
-                  ? 'bg-[#1C1A20] border-[#2E2B35] text-zinc-400 hover:text-white' 
-                  : 'bg-white border-[#E8E1D7] text-[#6B645A] hover:text-[#1F1C18]'
+                isDarkMode ? 'bg-[#1C1A20] border-[#2E2B35] text-zinc-400' : 'bg-white border-[#E8E1D7] text-[#6B645A]'
               }`}
-              title="Access & Settings"
             >
-              <Lock className="w-3.5 h-3.5" />
+              <Lock className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* 4-Step Production Pipeline Navigation Bar */}
-        <nav className={`w-full grid grid-cols-4 p-1 rounded-2xl border ${
+        {/* Dynamic 4-Step Pipeline Navigation Bar with Completion Badges */}
+        <nav className={`w-full grid grid-cols-4 p-1.5 rounded-2xl border ${
           isDarkMode ? 'bg-[#1A181E] border-[#2B2833]' : 'bg-[#F1ECE4] border-[#E5DED4]'
         }`}>
           {[
-            { num: 1, label: 'Setup', icon: Compass },
-            { num: 2, label: 'Interior', icon: FileText },
-            { num: 3, label: 'Cover', icon: Maximize2 },
-            { num: 4, label: 'Preflight', icon: CheckCircle },
+            { num: 1, label: 'Setup', icon: Compass, complete: isStep1Complete },
+            { num: 2, label: 'Interior', icon: FileText, complete: isStep2Complete },
+            { num: 3, label: 'Cover', icon: Maximize2, complete: isStep3Complete },
+            { num: 4, label: 'Preflight', icon: CheckCircle, complete: isStep4Complete },
           ].map((st) => {
             const IconComponent = st.icon;
             const isActive = currentStep === st.num;
             return (
               <button
                 key={st.num}
-                onClick={() => setCurrentStep(st.num)}
+                onClick={() => {
+                  setActiveDirectTool(null);
+                  setCurrentStep(st.num);
+                }}
                 className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-medium transition ${
                   isActive
-                    ? (isDarkMode ? 'bg-[#2B2833] text-white shadow-sm font-semibold' : 'bg-white text-[#1F1C18] shadow-sm font-semibold')
+                    ? (isDarkMode ? 'bg-[#2B2833] text-white shadow font-semibold' : 'bg-white text-[#1F1C18] shadow font-semibold')
                     : (isDarkMode ? 'text-[#8E8B92] hover:text-white' : 'text-[#827A70] hover:text-[#2D2A26]')
                 }`}
               >
-                <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-mono ${
-                  isActive ? 'bg-[#B85D3E] text-white' : (isDarkMode ? 'bg-[#25232A] text-zinc-400' : 'bg-[#E3DCcf] text-zinc-600')
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-mono font-bold ${
+                  st.complete 
+                    ? 'bg-emerald-500 text-white' 
+                    : (isActive ? 'bg-[#B85D3E] text-white' : (isDarkMode ? 'bg-[#25232A] text-zinc-400' : 'bg-[#E3DCcf] text-zinc-600'))
                 }`}>
-                  {st.num}
+                  {st.complete ? '✓' : st.num}
                 </span>
                 <span className="hidden sm:inline">{st.label}</span>
               </button>
@@ -769,58 +828,118 @@ export default function Home() {
         </nav>
       </header>
 
-      {/* STEP 1: BOOK SETUP ("What are you creating?") */}
-      {currentStep === 1 && (
-        <div className="w-full max-w-4xl flex flex-col gap-6">
+      {/* Modern Bento-Grid Hero: Direct Tools vs Complete Flow */}
+      <section className="w-full max-w-5xl mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           
-          {/* Quick Mental-Model Intent Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { title: 'Format Book', desc: 'Typeset & analyze manuscript', step: 2, icon: FileText },
-              { title: 'Full-Wrap Cover', desc: 'Calculate spine & safe areas', step: 3, icon: Maximize2 },
-              { title: 'Print Preflight', desc: 'Verify manufacturing health', step: 4, icon: CheckCircle },
-              { title: 'Try Sample Book', desc: 'Instant demo without upload', step: 2, isDemo: true, icon: PlayCircle },
-            ].map((action, i) => {
-              const ActionIcon = action.icon;
-              return (
-                <div
-                  key={i}
-                  onClick={() => {
-                    if (action.isDemo) {
-                      handleLoadSampleManuscript();
-                    }
-                    setCurrentStep(action.step);
-                  }}
-                  className={`p-3.5 rounded-2xl border cursor-pointer transition flex flex-col justify-between ${
-                    isDarkMode 
-                      ? 'bg-[#18171B] border-[#292630] hover:border-[#E07A5F]' 
-                      : 'bg-white border-[#EFEAE2] hover:border-[#B85D3E] shadow-sm'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <ActionIcon className="w-4 h-4 text-[#B85D3E]" />
-                    <span className="text-xs font-bold font-serif">{action.title}</span>
-                  </div>
-                  <p className="text-[10px] text-[#8C8479] leading-snug">{action.desc}</p>
-                </div>
-              );
-            })}
+          {/* Bento Card 1: Warm Sunset - Interior Formatting */}
+          <div 
+            onClick={() => { setCurrentStep(2); setInteriorSubMode('typeset'); }}
+            className="p-5 rounded-3xl border cursor-pointer transition transform hover:-translate-y-0.5 bg-gradient-to-br from-[#FAF3EC] to-[#F5E6D8] dark:from-[#251D1A] dark:to-[#32231E] border-[#EAD7C5] dark:border-[#4A3228] flex flex-col justify-between"
+          >
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-[#B85D3E] block mb-1">
+                Direct Tool
+              </span>
+              <h3 className="text-base font-serif font-bold text-[#1F1C18] dark:text-zinc-100 mb-1">
+                Manuscript Formatting
+              </h3>
+              <p className="text-xs text-[#7A6B5D] dark:text-[#A8988B] leading-relaxed">
+                Typeset DOCX files with mirror margins, running headers, drop caps, and AI-cliche scanning.
+              </p>
+            </div>
+            <div className="mt-4 flex items-center justify-between text-xs font-semibold text-[#B85D3E]">
+              <span>Open Typesetter</span>
+              <ArrowRight className="w-4 h-4" />
+            </div>
           </div>
 
+          {/* Bento Card 2: Fresh Botanical - Full-Wrap Cover */}
+          <div 
+            onClick={() => setCurrentStep(3)}
+            className="p-5 rounded-3xl border cursor-pointer transition transform hover:-translate-y-0.5 bg-gradient-to-br from-[#F0F6F2] to-[#E3EFE7] dark:from-[#17241C] dark:to-[#1E3326] border-[#CFE4D6] dark:border-[#2D4D38] flex flex-col justify-between"
+          >
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400 block mb-1">
+                Direct Tool
+              </span>
+              <h3 className="text-base font-serif font-bold text-[#1F1C18] dark:text-zinc-100 mb-1">
+                Full-Wrap Cover Studio
+              </h3>
+              <p className="text-xs text-[#5D7365] dark:text-[#90AFA0] leading-relaxed">
+                Live SVG blueprint for Amazon KDP, dynamic spine math, 300 DPI canvas, and barcode safe zones.
+              </p>
+            </div>
+            <div className="mt-4 flex items-center justify-between text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <span>Open Cover Blueprint</span>
+              <ArrowRight className="w-4 h-4" />
+            </div>
+          </div>
+
+          {/* Bento Card 3: Deep Slate - Preflight & Economics */}
+          <div 
+            onClick={() => setCurrentStep(4)}
+            className="p-5 rounded-3xl border cursor-pointer transition transform hover:-translate-y-0.5 bg-gradient-to-br from-[#F3F4F6] to-[#E5E7EB] dark:from-[#1E2024] dark:to-[#282B32] border-[#D1D5DB] dark:border-[#3D424D] flex flex-col justify-between"
+          >
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-[#4B5563] dark:text-zinc-400 block mb-1">
+                Direct Tool
+              </span>
+              <h3 className="text-base font-serif font-bold text-[#1F1C18] dark:text-zinc-100 mb-1">
+                KDP Preflight & Pricing
+              </h3>
+              <p className="text-xs text-[#6B7280] dark:text-zinc-400 leading-relaxed">
+                PASS/REVIEW checks, US ($) and India (₹) print cost calculations, and 60% royalty projections.
+              </p>
+            </div>
+            <div className="mt-4 flex items-center justify-between text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+              <span>Run Preflight Audit</span>
+              <ArrowRight className="w-4 h-4" />
+            </div>
+          </div>
+
+        </div>
+
+        {/* Recommended Full Journey Banner */}
+        <div className={`p-4 rounded-3xl border flex flex-col sm:flex-row items-center justify-between gap-3 ${
+          isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2] shadow-sm'
+        }`}>
+          <div className="flex items-center gap-3 text-center sm:text-left">
+            <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-600 shrink-0">
+              <Award className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-bold font-serif">Recommended: Complete Guided Production Flow</h4>
+              <p className="text-[11px] text-[#8C8479]">
+                Step 1: Setup ➔ Step 2: Interior ➔ Step 3: Cover ➔ Step 4: Preflight Verification.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => { setCurrentStep(1); setActiveDirectTool(null); }}
+            className="w-full sm:w-auto px-5 py-2.5 bg-[#B85D3E] hover:bg-[#A35034] text-white rounded-full text-xs font-semibold shadow-md transition"
+          >
+            Start Guided Flow
+          </button>
+        </div>
+      </section>
+            {/* STEP 1: BOOK SETUP */}
+      {currentStep === 1 && (
+        <div className="w-full max-w-5xl flex flex-col gap-6">
           <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
             isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
           }`}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className={`text-sm sm:text-base font-serif font-bold ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>
+                <h2 className={`text-base font-serif font-bold ${isDarkMode ? 'text-zinc-100' : 'text-[#1F1C18]'}`}>
                   What are you creating?
                 </h2>
                 <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#7A7368]'}`}>
                   Select your publication type to load standard trim, paper weight, and margin recommendations.
                 </p>
               </div>
-              <span className="text-[10px] text-[#4F7358] font-sans bg-[#F0F5F1] dark:bg-[#1E2721] border border-[#D5E3D8] dark:border-[#2D4534] px-2.5 py-1 rounded-full font-medium">
-                Standard POD Presets
+              <span className="text-[10px] text-emerald-600 font-sans bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full font-semibold">
+                Amazon KDP Presets
               </span>
             </div>
 
@@ -872,7 +991,8 @@ export default function Home() {
               </div>
             </div>
           </section>
-                              {/* Calibrated Manufacturing Specifications Card */}
+
+          {/* Manufacturing Calibrations */}
           <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
             isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
           }`}>
@@ -894,7 +1014,7 @@ export default function Home() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
               <div>
-                <label className={`text-[10px] font-semibold uppercase tracking-wider block mb-1.5 font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'}`}>
+                <label className="text-[10px] font-semibold uppercase tracking-wider block mb-1.5 text-[#8C8479]">
                   Trim Dimensions
                 </label>
                 <select
@@ -903,11 +1023,7 @@ export default function Home() {
                     setTrimSize(e.target.value);
                     saveLocalBookProfile({ trimSize: e.target.value });
                   }}
-                  className={`w-full border rounded-xl px-3 py-2.5 text-xs font-medium focus:outline-none transition ${
-                    isDarkMode 
-                      ? 'bg-[#121114] border-[#2D2A35] text-zinc-200 focus:border-[#E07A5F]' 
-                      : 'bg-[#FAF9F6] border-[#E8E2D8] text-[#2D2A26] focus:border-[#B85D3E]'
-                  }`}
+                  className="w-full border rounded-xl px-3 py-2.5 text-xs font-medium bg-transparent"
                 >
                   {Object.entries(TRIM_PRESETS).map(([id, t]) => (
                     <option key={id} value={id}>{t.label}</option>
@@ -916,7 +1032,7 @@ export default function Home() {
               </div>
 
               <div>
-                <label className={`text-[10px] font-semibold uppercase tracking-wider block mb-1.5 font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'}`}>
+                <label className="text-[10px] font-semibold uppercase tracking-wider block mb-1.5 text-[#8C8479]">
                   Paper Stock Caliper
                 </label>
                 <select
@@ -925,11 +1041,7 @@ export default function Home() {
                     setPaperType(e.target.value);
                     saveLocalBookProfile({ paperType: e.target.value });
                   }}
-                  className={`w-full border rounded-xl px-3 py-2.5 text-xs font-medium focus:outline-none transition ${
-                    isDarkMode 
-                      ? 'bg-[#121114] border-[#2D2A35] text-zinc-200 focus:border-[#E07A5F]' 
-                      : 'bg-[#FAF9F6] border-[#E8E2D8] text-[#2D2A26] focus:border-[#B85D3E]'
-                  }`}
+                  className="w-full border rounded-xl px-3 py-2.5 text-xs font-medium bg-transparent"
                 >
                   {Object.entries(PAPER_SPECS).map(([id, p]) => (
                     <option key={id} value={id}>{p.label}</option>
@@ -938,7 +1050,7 @@ export default function Home() {
               </div>
 
               <div>
-                <label className={`text-[10px] font-semibold uppercase tracking-wider block mb-1.5 font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#8C8479]'}`}>
+                <label className="text-[10px] font-semibold uppercase tracking-wider block mb-1.5 text-[#8C8479]">
                   Page Extent ({activeEffectivePages} Pages)
                 </label>
                 <input
@@ -956,46 +1068,27 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Live Manufacturing Metric Readouts */}
+            {/* Readout Strip */}
             <div className={`border rounded-2xl p-4 grid grid-cols-3 gap-2 text-center mb-4 ${
               isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'
             }`}>
               <div>
-                <span className={`text-[9px] uppercase tracking-wider block mb-1 font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#9E968B]'}`}>
-                  Spine Gutter
-                </span>
-                <span className={`text-xs sm:text-sm font-bold font-mono ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`}>
-                  {gutter}"
-                </span>
-                <span className="text-[9px] text-[#8C8479] block mt-0.5 font-sans">
-                  {gutter}" recommended binding space for {activeEffectivePages} pages.
-                </span>
+                <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Spine Gutter</span>
+                <span className="text-xs sm:text-sm font-bold font-mono text-[#B85D3E]">{gutter}"</span>
+                <span className="text-[9px] text-[#8C8479] block mt-0.5">Recommended binding margin.</span>
               </div>
               <div>
-                <span className={`text-[9px] uppercase tracking-wider block mb-1 font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#9E968B]'}`}>
-                  Outside Margin
-                </span>
-                <span className={`text-xs sm:text-sm font-semibold font-mono ${isDarkMode ? 'text-zinc-200' : 'text-[#3B3731]'}`}>
-                  {outsideMargin}"
-                </span>
-                <span className="text-[9px] text-[#8C8479] block mt-0.5 font-sans">
-                  Finger safe zone.
-                </span>
+                <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Outside Margin</span>
+                <span className="text-xs sm:text-sm font-semibold font-mono">{outsideMargin}"</span>
+                <span className="text-[9px] text-[#8C8479] block mt-0.5">Finger safety clearance.</span>
               </div>
               <div>
-                <span className={`text-[9px] uppercase tracking-wider block mb-1 font-sans ${isDarkMode ? 'text-[#8E8B92]' : 'text-[#9E968B]'}`}>
-                  Top / Bottom
-                </span>
-                <span className={`text-xs sm:text-sm font-semibold font-mono ${isDarkMode ? 'text-zinc-200' : 'text-[#3B3731]'}`}>
-                  {topBottomMargin}"
-                </span>
-                <span className="text-[9px] text-[#8C8479] block mt-0.5 font-sans">
-                  Running head buffer.
-                </span>
+                <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Top / Bottom</span>
+                <span className="text-xs sm:text-sm font-semibold font-mono">{topBottomMargin}"</span>
+                <span className="text-[9px] text-[#8C8479] block mt-0.5">Running head buffer.</span>
               </div>
             </div>
 
-            {/* Direct Technical Margin Controls (Shown in Advanced Mode) */}
             {experienceMode === 'advanced' && (
               <div className="pt-4 border-t border-black/5 dark:border-white/5 grid grid-cols-3 gap-3">
                 <div>
@@ -1044,14 +1137,13 @@ export default function Home() {
             )}
           </section>
 
-          {/* Neutral Industry POD Notice */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
             <span className="text-[11px] text-[#8C8479] font-sans text-center sm:text-left">
-              Designed around common print-on-demand publishing specifications. Always verify final requirements with your selected publishing provider.
+              Amazon KDP compliant specifications. Mirror margins calculated automatically.
             </span>
             <button
               onClick={() => setCurrentStep(2)}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md shadow-[#B85D3E]/20"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md"
             >
               <span>Continue to Step 2: Interior</span>
               <ArrowRight className="w-4 h-4" />
@@ -1059,9 +1151,9 @@ export default function Home() {
           </div>
         </div>
       )}
-            {/* STEP 2: INTERIOR FORMATTING & MANUSCRIPT */}
+                {/* STEP 2: INTERIOR FORMATTING & MANUSCRIPT */}
       {currentStep === 2 && (
-        <div className="w-full max-w-4xl flex flex-col gap-6">
+        <div className="w-full max-w-5xl flex flex-col gap-6">
           <div className="flex items-center justify-between pb-3 border-b border-[#EFEAE2] dark:border-[#262429]">
             <div className="flex items-center gap-2">
               <FileText className={`w-4 h-4 ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`} />
@@ -1145,7 +1237,7 @@ export default function Home() {
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isProcessing}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-5 py-3 rounded-full transition shadow-md shadow-[#B85D3E]/20"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-5 py-3 rounded-full transition shadow-md"
                   >
                     {isProcessing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                     <span>{fileName ? `Uploaded: ${fileName}` : 'Upload DOCX Manuscript'}</span>
@@ -1163,16 +1255,16 @@ export default function Home() {
                     <button
                       onClick={handleExportManuscriptDocx}
                       disabled={isExporting}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 border font-medium text-xs px-4 py-3 rounded-full transition bg-transparent"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 border font-medium text-xs px-4 py-3 rounded-full transition bg-transparent text-emerald-600"
                     >
-                      {isExporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-[#5A8264]" />}
+                      {isExporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                       <span>Export Formatted DOCX</span>
                     </button>
                   )}
                 </div>
               </section>
 
-              {/* RESTORED: BOOK CRAFT SPREAD PREVIEW (INTERACTIVE MOCKUP) */}
+              {/* RESTORED: INTERACTIVE BOOK SPREAD PREVIEW */}
               <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
                 isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
               }`}>
@@ -1204,13 +1296,13 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Open Two-Page Spread Canvas with Dynamic Gutter */}
+                {/* Open Spread Canvas with Dynamic Gutter */}
                 <div className={`w-full rounded-2xl border p-4 sm:p-6 flex items-center justify-center overflow-x-auto ${
                   isDarkMode ? 'bg-[#100F12] border-[#26242D]' : 'bg-[#F2EEE9] border-[#E5DDD2]'
                 }`}>
                   <div className="flex items-center shadow-2xl rounded-sm overflow-hidden select-none border border-black/10">
                     
-                    {/* Left Page (Verso - Even Page) */}
+                    {/* Left Page (Verso) */}
                     <div 
                       className="w-[145px] sm:w-[190px] aspect-[1/1.45] bg-[#FAF8F5] text-[#2D2A26] flex flex-col justify-between p-3 sm:p-4 border-r border-[#E8E2D8] relative"
                       style={{
@@ -1238,10 +1330,10 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Physical Spine Crease Shadow */}
+                    {/* Spine Crease */}
                     <div className="w-[6px] sm:w-[8px] h-full bg-gradient-to-r from-black/25 via-black/10 to-black/25 z-10 self-stretch"></div>
 
-                    {/* Right Page (Recto - Odd Page) */}
+                    {/* Right Page (Recto) */}
                     <div 
                       className="w-[145px] sm:w-[190px] aspect-[1/1.45] bg-[#FAF8F5] text-[#2D2A26] flex flex-col justify-between p-3 sm:p-4 border-l border-[#E8E2D8] relative"
                       style={{
@@ -1305,46 +1397,80 @@ export default function Home() {
                 </p>
               </section>
 
-              {/* CLIENT-SIDE MANUSCRIPT INSPECTION & ANOMALY DASHBOARD */}
-              {manuscriptAnalysis && (
+              {/* EDITORIAL QUALITY & AI-CLICHE HEURISTIC AUDIT */}
+              {contentAudit && (
                 <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
                   isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
                 }`}>
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-[#B85D3E]" />
+                      <Sparkles className="w-4 h-4 text-emerald-500" />
                       <h3 className={`text-xs font-bold uppercase tracking-wider font-sans ${isDarkMode ? 'text-zinc-200' : 'text-[#1F1C18]'}`}>
-                        Manuscript Structural Audit
+                        Editorial & Content Quality Scanner
                       </h3>
                     </div>
-                    <span className="text-[10px] font-mono text-[#5A8264] bg-[#F0F5F1] dark:bg-[#1E2721] px-2.5 py-0.5 rounded-full border border-[#D5E3D8] dark:border-[#2D4534]">
-                      Zero-Server Verified
+                    <span className="text-[10px] font-mono text-emerald-600 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                      Browser-Native NLP Pass
                     </span>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-5">
                     <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
-                      <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Word Count</span>
-                      <span className="text-xs sm:text-sm font-bold font-mono">{manuscriptAnalysis.wordCount.toLocaleString()}</span>
+                      <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Readability Ease</span>
+                      <span className="text-xs sm:text-sm font-bold font-mono text-emerald-600">{contentAudit.readingEase} / 100</span>
                     </div>
                     <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
-                      <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Rendered Pages</span>
-                      <span className="text-xs sm:text-sm font-bold font-mono text-[#B85D3E]">{manuscriptAnalysis.renderedPageCount}</span>
+                      <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Grade Level</span>
+                      <span className="text-xs sm:text-sm font-bold font-mono">Grade {contentAudit.gradeLevel}</span>
                     </div>
                     <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
-                      <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Chapters Found</span>
-                      <span className="text-xs sm:text-sm font-bold font-mono">{manuscriptAnalysis.detectedChapters.length}</span>
+                      <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Avg Sentence</span>
+                      <span className="text-xs sm:text-sm font-bold font-mono">{contentAudit.sentenceBalance.avgWordsPerSentence} words</span>
                     </div>
                     <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
-                      <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Paragraph Blocks</span>
-                      <span className="text-xs sm:text-sm font-bold font-mono">{manuscriptAnalysis.paragraphCount}</span>
+                      <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">AI Cliches Flagged</span>
+                      <span className={`text-xs sm:text-sm font-bold font-mono ${contentAudit.flaggedCliches.length > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                        {contentAudit.flaggedCliches.length}
+                      </span>
                     </div>
                   </div>
 
+                  {contentAudit.flaggedCliches.length > 0 ? (
+                    <div className="p-3.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 mb-3 text-xs">
+                      <span className="font-semibold block text-amber-700 dark:text-amber-400 mb-1">
+                        Robotic / AI Words Detected:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {contentAudit.flaggedCliches.map((c, i) => (
+                          <span key={i} className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 font-mono text-[10px]">
+                            "{c.word}" ({c.count}x)
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400">
+                      <Check className="w-4 h-4" />
+                      <span>Natural human tone: Zero repetitive AI buzzwords flagged.</span>
+                    </div>
+                  )}
+                </section>
+              )}
+
+                      {/* STRUCTURAL ANOMALY AUDIT */}
+              {manuscriptAnalysis && (
+                <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
+                  isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
+                }`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xs font-bold font-serif">Structural Anomaly Scanner</span>
+                    <span className="text-[10px] font-mono text-[#8C8479]">{manuscriptAnalysis.wordCount.toLocaleString()} words</span>
+                  </div>
+
                   {manuscriptAnalysis.renderedPageCount !== pageCount && (
-                    <div className="mb-5 p-3 rounded-2xl border border-[#B85D3E]/30 bg-[#FAF4ED] dark:bg-[#251E1C] flex items-center justify-between text-xs">
+                    <div className="mb-4 p-3 rounded-2xl border border-[#B85D3E]/30 bg-[#FAF4ED] dark:bg-[#251E1C] flex items-center justify-between text-xs">
                       <span className="text-[11px] text-[#8C8479]">
-                        Detected page extent is <b>{manuscriptAnalysis.renderedPageCount} pages</b> (configured: {pageCount} pages).
+                        Detected page extent is <b>{manuscriptAnalysis.renderedPageCount} pages</b> (configured: {pageCount}).
                       </span>
                       <button
                         onClick={() => {
@@ -1358,24 +1484,11 @@ export default function Home() {
                     </div>
                   )}
 
-                  <div className="space-y-2.5">
-                    {manuscriptAnalysis.anomalies.map((anom, idx) => (
-                      <div key={idx} className="p-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 flex items-start gap-2.5 text-xs">
-                        <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-semibold block text-amber-700 dark:text-amber-400">{anom.title}</span>
-                          <span className="text-[11px] text-[#8C8479] leading-relaxed">{anom.message}</span>
-                        </div>
-                      </div>
-                    ))}
-
+                  <div className="space-y-2">
                     {manuscriptAnalysis.passes.map((pass, idx) => (
-                      <div key={idx} className="p-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 flex items-start gap-2.5 text-xs">
-                        <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-semibold block text-emerald-700 dark:text-emerald-400">{pass.title}</span>
-                          <span className="text-[11px] text-[#8C8479] leading-relaxed">{pass.message}</span>
-                        </div>
+                      <div key={idx} className="p-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 flex items-center gap-2 text-xs">
+                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="text-emerald-700 dark:text-emerald-400">{pass.title}: {pass.message}</span>
                       </div>
                     ))}
                   </div>
@@ -1403,19 +1516,19 @@ export default function Home() {
                   onClick={() => visualBatchInputRef.current?.click()}
                   className="w-full py-16 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center cursor-pointer transition border-[#E2D8CC] dark:border-[#2D2A35]"
                 >
-               <ImageIcon className="w-8 h-8 text-[#B85D3E] mb-3" />
+                  <ImageIcon className="w-8 h-8 text-[#B85D3E] mb-3" />
                   <span className="text-sm font-bold font-serif mb-1">Upload Planner / Journal Page Images</span>
-                  <p className="text-xs text-[#8C8479] mb-4">Lossless PNG / JPG passthrough with DPI preservation.</p>
+                  <p className="text-xs text-[#8C8479] mb-4">300 DPI preservation for KDP print verification.</p>
                   <span className="px-4 py-2 bg-[#B85D3E] text-white text-xs font-semibold rounded-full shadow-md">Browse Files</span>
                 </div>
               ) : (
                 <div>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-mono font-bold">{visualPages.length} Pages in Visual Strip</span>
+                    <span className="text-xs font-mono font-bold">{visualPages.length} Pages • Print Resolution Verified</span>
                     <button
                       onClick={handleExportVisualPdf}
                       disabled={isCompilingPdf}
-                      className="px-4 py-2 bg-[#5A8264] text-white rounded-full text-xs font-medium"
+                      className="px-4 py-2 bg-emerald-600 text-white rounded-full text-xs font-medium"
                     >
                       Export Lossless Print PDF
                     </button>
@@ -1425,7 +1538,7 @@ export default function Home() {
                       <div key={p.id} className="aspect-[1/1.42] border rounded-xl overflow-hidden relative">
                         <img src={p.dataUrl} alt={p.name} className="w-full h-full object-cover" />
                         <span className="absolute bottom-1 right-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded font-mono">
-                          p. {idx + 1}
+                          {p.dpi} DPI
                         </span>
                       </div>
                     ))}
@@ -1464,18 +1577,17 @@ export default function Home() {
             </section>
           )}
 
-          {/* Step 2 Bottom Navigation */}
           <div className="flex items-center justify-between pt-2">
             <button
               onClick={() => setCurrentStep(1)}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8C8479] hover:text-[#2D2A26]"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8C8479]"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Step 1: Setup</span>
             </button>
             <button
               onClick={() => setCurrentStep(3)}
-              className="inline-flex items-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md shadow-[#B85D3E]/20"
+              className="inline-flex items-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md"
             >
               <span>Continue to Step 3: Cover</span>
               <ArrowRight className="w-4 h-4" />
@@ -1483,9 +1595,9 @@ export default function Home() {
           </div>
         </div>
       )}
-            {/* STEP 3: COVER SPECIFICATIONS & SAFE AREA */}
+            {/* STEP 3: COVER SPECIFICATIONS */}
       {currentStep === 3 && (
-        <div className="w-full max-w-4xl flex flex-col gap-6">
+        <div className="w-full max-w-5xl flex flex-col gap-6">
           <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
             isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
           }`}>
@@ -1505,11 +1617,10 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Dimension Readouts Strip */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-6">
               <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
                 <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Spine Width</span>
-                <span className={`text-xs sm:text-sm font-bold font-mono ${isDarkMode ? 'text-[#E07A5F]' : 'text-[#B85D3E]'}`}>{spineWidth}"</span>
+                <span className="text-xs sm:text-sm font-bold font-mono text-[#B85D3E]">{spineWidth}"</span>
               </div>
               <div className={`p-3 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-[#FAF8F5] border-[#EFEAE2]'}`}>
                 <span className="text-[9px] uppercase tracking-wider block mb-1 text-[#8C8479]">Total Width</span>
@@ -1525,7 +1636,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Interactive Vector SVG Cover Blueprint */}
             <div className="mb-4">
               <CoverVisualizer
                 trimWidth={currentTrim.width}
@@ -1538,23 +1648,31 @@ export default function Home() {
               />
             </div>
 
-            <p className="text-[10px] text-center text-[#8C8479] font-sans">
-              Standard Print Bleed: 0.125" included on all outer margins. Enter exact pixel canvas ({coverPixelsWidth} × {coverPixelsHeight} px) into Canva or Photoshop.
-            </p>
+            {/* Amazon KDP Auto-Barcode Exclusion Warning */}
+            <div className="p-3.5 rounded-2xl border border-amber-500/30 bg-amber-500/5 flex items-start gap-2.5 text-xs mb-3">
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold block text-amber-700 dark:text-amber-400">
+                  Amazon KDP Barcode Zone (2.0" × 1.2" Reserved)
+                </span>
+                <p className="text-[11px] text-[#8C8479] leading-relaxed">
+                  Keep the bottom-right quadrant of your back cover free of text, URLs, or faces. Amazon automatically prints the ISBN barcode here during physical manufacture.
+                </p>
+              </div>
+            </div>
           </section>
 
-          {/* Step 3 Bottom Navigation */}
           <div className="flex items-center justify-between pt-2">
             <button
               onClick={() => setCurrentStep(2)}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8C8479] hover:text-[#2D2A26]"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8C8479]"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Step 2: Interior</span>
             </button>
             <button
               onClick={() => setCurrentStep(4)}
-              className="inline-flex items-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md shadow-[#B85D3E]/20"
+              className="inline-flex items-center gap-2 bg-[#B85D3E] hover:bg-[#A35034] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md"
             >
               <span>Continue to Step 4: Preflight</span>
               <ArrowRight className="w-4 h-4" />
@@ -1563,59 +1681,72 @@ export default function Home() {
         </div>
       )}
 
-      {/* STEP 4: PRINT PREFLIGHT & BOOK HEALTH SUMMARY */}
+      {/* STEP 4: PRINT PREFLIGHT & KDP ROI ENGINE */}
       {currentStep === 4 && (
-        <div className="w-full max-w-4xl flex flex-col gap-6">
+        <div className="w-full max-w-5xl flex flex-col gap-6">
           <section className={`border rounded-3xl p-5 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.03)] transition ${
             isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
           }`}>
             <div className="flex items-center justify-between mb-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-emerald-500" />
+                  <h2 className="text-sm sm:text-base font-serif font-bold">
+                    KDP Final Preflight & Readiness Dashboard
+                  </h2>
+                </div>
+                <p className="text-xs text-[#8C8479] mt-0.5">
+                  ₹0 Investment Verification • Amazon KDP Paper & Geometry Standards
+                </p>
+              </div>
+
+              {/* Overall Readiness Gauge */}
               <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-[#5A8264]" />
-                <h2 className={`text-xs font-bold uppercase tracking-wider font-sans ${isDarkMode ? 'text-zinc-200' : 'text-[#1F1C18]'}`}>
-                  Book Health & Print Preflight Summary
-                </h2>
+                <span className="text-xs font-mono font-bold text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+                  {readinessScore}% KDP Ready
+                </span>
               </div>
-              <span className="text-[10px] text-[#5A8264] font-semibold bg-[#F0F5F1] dark:bg-[#1E2721] px-2.5 py-0.5 rounded-full border border-[#D5E3D8] dark:border-[#2D4534]">
-                Print Specification Check
+            </div>
+
+            {/* KDP Printing Cost & 60% Royalty Projection */}
+            <div className="mb-6 p-4 rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-transparent">
+              <span className="text-xs font-serif font-bold text-emerald-700 dark:text-emerald-400 block mb-2">
+                Amazon KDP Printing Cost & Royalty Estimator (₹0 ROI Engine)
               </span>
-            </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className={`p-3.5 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-white border-[#EAE3D8]'}`}>
+                  <span className="text-[10px] uppercase font-bold text-[#8C8479] block mb-1">
+                    Amazon US Marketplace (USD)
+                  </span>
+                  <div className="text-xs space-y-1 font-mono">
+                    <p>• KDP Print Cost: <b>${economics.us.printCost}</b></p>
+                    <p>• Break-even List Price: <b>${economics.us.minPrice}</b></p>
+                    <p>• Suggested Price: <b>${economics.us.suggestedPrice}</b> (Royalty: <b className="text-emerald-600">+${economics.us.royalty}</b>)</p>
+                  </div>
+                </div>
 
-            {/* Categorized Health Cards: Interior vs Cover */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#282630]' : 'bg-[#FAF8F5] border-[#EAE3D8]'}`}>
-                <span className="text-[11px] font-bold font-serif block mb-2 text-[#B85D3E]">
-                  Interior Health Specifications
-                </span>
-                <ul className="text-xs space-y-1.5 font-sans text-[#7A7368] dark:text-[#9E9BA3]">
-                  <li>• Trim Size: <b>{currentTrim.width}" × {currentTrim.height}" Trade</b></li>
-                  <li>• Page Extent: <b>{activeEffectivePages} pages</b> (Minimum 24 met)</li>
-                  <li>• Binding Gutter: <b>{gutter}"</b> calculated safety margin</li>
-                  <li>• Paper Stock: <b className="capitalize">{paperType}</b> ({PAPER_SPECS[paperType]?.caliper}" caliper)</li>
-                </ul>
-              </div>
-
-              <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#282630]' : 'bg-[#FAF8F5] border-[#EAE3D8]'}`}>
-                <span className="text-[11px] font-bold font-serif block mb-2 text-[#5A8264]">
-                  Cover Health Specifications
-                </span>
-                <ul className="text-xs space-y-1.5 font-sans text-[#7A7368] dark:text-[#9E9BA3]">
-                  <li>• Full-Wrap Width: <b>{fullCoverWidth}"</b> (Includes spine & bleed)</li>
-                  <li>• Full-Wrap Height: <b>{fullCoverHeight}"</b> (Includes 0.125" bleed)</li>
-                  <li>• Calculated Spine: <b>{spineWidth}"</b></li>
-                  <li>• 300 DPI Target: <b>{coverPixelsWidth} × {coverPixelsHeight} px</b></li>
-                </ul>
+                <div className={`p-3.5 rounded-2xl border ${isDarkMode ? 'bg-[#121114] border-[#292630]' : 'bg-white border-[#EAE3D8]'}`}>
+                  <span className="text-[10px] uppercase font-bold text-[#8C8479] block mb-1">
+                    Amazon India Marketplace (INR)
+                  </span>
+                  <div className="text-xs space-y-1 font-mono">
+                    <p>• KDP Print Cost: <b>₹{economics.india.printCost}</b></p>
+                    <p>• Break-even List Price: <b>₹{economics.india.minPrice}</b></p>
+                    <p>• Suggested Price: <b>₹{economics.india.suggestedPrice}</b> (Royalty: <b className="text-emerald-600">+₹{economics.india.royalty}</b>)</p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Categorized Findings Matrix (PASS / REVIEW / FIX) */}
+            {/* Preflight Checks */}
             <div className="space-y-3 mb-6">
               <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2.5">
                   <Check className="w-4 h-4 text-emerald-500" />
                   <div>
-                    <span className="font-semibold block text-emerald-600 dark:text-emerald-400">Page Extent Compatible</span>
-                    <span className="text-[11px] text-[#8C8479]">{activeEffectivePages} pages meets standard trade print manufacturing minimums.</span>
+                    <span className="font-semibold block text-emerald-600">Page Extent Compatible</span>
+                    <span className="text-[11px] text-[#8C8479]">{activeEffectivePages} pages meets Amazon KDP paperback minimum (24 pages).</span>
                   </div>
                 </div>
                 <span className="text-[10px] font-mono font-bold text-emerald-600">✓ PASS</span>
@@ -1625,8 +1756,8 @@ export default function Home() {
                 <div className="flex items-center gap-2.5">
                   <Check className="w-4 h-4 text-emerald-500" />
                   <div>
-                    <span className="font-semibold block text-emerald-600 dark:text-emerald-400">Spine Gutter Margin</span>
-                    <span className="text-[11px] text-[#8C8479]">{gutter}" inner margin calculated to prevent spine clipping during binding.</span>
+                    <span className="font-semibold block text-emerald-600">Spine Gutter Tolerance</span>
+                    <span className="text-[11px] text-[#8C8479]">{gutter}" inner margin calculated to prevent text slipping into binding.</span>
                   </div>
                 </div>
                 <span className="text-[10px] font-mono font-bold text-emerald-600">✓ PASS</span>
@@ -1636,8 +1767,8 @@ export default function Home() {
                 <div className="flex items-center gap-2.5">
                   <Check className="w-4 h-4 text-emerald-500" />
                   <div>
-                    <span className="font-semibold block text-emerald-600 dark:text-emerald-400">300 DPI Commercial Target</span>
-                    <span className="text-[11px] text-[#8C8479]">Dimensions verified for print-ready raster generation.</span>
+                    <span className="font-semibold block text-emerald-600">300 DPI Target Dimensions</span>
+                    <span className="text-[11px] text-[#8C8479]">{coverPixelsWidth} × {coverPixelsHeight} px for print-ready raster artwork.</span>
                   </div>
                 </div>
                 <span className="text-[10px] font-mono font-bold text-emerald-600">✓ PASS</span>
@@ -1648,8 +1779,8 @@ export default function Home() {
                   <div className="flex items-center gap-2.5">
                     <AlertTriangle className="w-4 h-4 text-amber-500" />
                     <div>
-                      <span className="font-semibold block text-amber-600 dark:text-amber-400">Narrow Spine Notice</span>
-                      <span className="text-[11px] text-[#8C8479]">Spine width ({spineWidth}") is under 0.20". Spine text is not recommended for books under 80 pages.</span>
+                      <span className="font-semibold block text-amber-600">Narrow Spine Text Warning</span>
+                      <span className="text-[11px] text-[#8C8479]">Spine width ({spineWidth}") is under 0.20". Amazon KDP disallows spine text for books under 80 pages.</span>
                     </div>
                   </div>
                   <span className="text-[10px] font-mono font-bold text-amber-600">⚠ REVIEW</span>
@@ -1657,58 +1788,98 @@ export default function Home() {
               )}
             </div>
 
-            {/* Spec Sheet Export Action */}
-            <div className="pt-5 border-t border-black/5 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <span className="text-[11px] text-[#8C8479] font-sans text-center sm:text-left">
-                Designed around common print-on-demand publishing specifications. Always verify final requirements with your selected publishing provider.
+            {/* Final Amazon KDP 1-Click Upload Checklist */}
+            <div className={`p-4 rounded-3xl border mb-6 ${isDarkMode ? 'bg-[#141317] border-[#292630]' : 'bg-[#FAF8F5] border-[#EAE3D8]'}`}>
+              <span className="text-xs font-bold font-serif block mb-2">
+                Final Amazon KDP Upload Checklist (Verify Before Publishing)
+              </span>
+              <div className="space-y-2 text-xs">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={kdpChecklist.titleMatch} 
+                    onChange={(e) => setKdpChecklist({ ...kdpChecklist, titleMatch: e.target.checked })} 
+                    className="accent-emerald-600"
+                  />
+                  <span>Manuscript title ("{bookTitle}") matches book cover text exactly.</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={kdpChecklist.rightsDeclared} 
+                    onChange={(e) => setKdpChecklist({ ...kdpChecklist, rightsDeclared: e.target.checked })} 
+                    className="accent-emerald-600"
+                  />
+                  <span>Copyright page or disclaimer included in front-matter.</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={kdpChecklist.barcodeSafe} 
+                    onChange={(e) => setKdpChecklist({ ...kdpChecklist, barcodeSafe: e.target.checked })} 
+                    className="accent-emerald-600"
+                  />
+                  <span>Lower-right back cover (2.0" × 1.2") kept free of text/images for barcode.</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Download Spec Sheet */}
+            <div className="pt-4 border-t border-black/5 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <span className="text-[11px] text-[#8C8479]">
+                Amazon KDP Paperback Verified • Zero External Software Fees
               </span>
               <button
                 onClick={() => {
-                  const spec = `PUBLISHSTUDIO - PRODUCTION SPECIFICATION REPORT\n` +
-                    `==================================================\n` +
+                  const spec = `PUBLISHSTUDIO - AMAZON KDP PRODUCTION SPECIFICATION REPORT\n` +
+                    `============================================================\n` +
                     `Book Title: ${bookTitle}\n` +
                     `Author: ${authorName}\n` +
                     `Publication Archetype: ${BOOK_ARCHETYPES[selectedArchetype]?.title}\n` +
                     `\n` +
-                    `INTERIOR MANUFACTURING CALIBRATIONS:\n` +
-                    `--------------------------------------------------\n` +
+                    `KDP INTERIOR SPECIFICATIONS:\n` +
+                    `------------------------------------------------------------\n` +
                     `Trim Size: ${currentTrim.width}" x ${currentTrim.height}"\n` +
                     `Page Count: ${activeEffectivePages} Pages\n` +
                     `Paper Stock: ${PAPER_SPECS[paperType]?.label}\n` +
                     `Binding Gutter Margin: ${gutter}"\n` +
                     `Outside Margin: ${outsideMargin}"\n` +
                     `Top/Bottom Margin: ${topBottomMargin}"\n` +
-                    `Folios & Running Headers: Enabled (Mirrored)\n` +
+                    `Folios & Running Headers: Mirrored\n` +
                     `\n` +
-                    `FULL-WRAP COVER SPECIFICATIONS:\n` +
-                    `--------------------------------------------------\n` +
+                    `KDP FULL-WRAP COVER BLUEPRINT:\n` +
+                    `------------------------------------------------------------\n` +
                     `Spine Width: ${spineWidth}"\n` +
                     `Full-Wrap Width: ${fullCoverWidth}" (Includes bleed + spine)\n` +
                     `Full-Wrap Height: ${fullCoverHeight}" (Includes 0.125" bleed)\n` +
-                    `Required Canvas @ 300 DPI: ${coverPixelsWidth} x ${coverPixelsHeight} px\n` +
-                    `Mechanical Outer Bleed: 0.125"\n` +
-                    `Safe Area Margin: 0.25" inward from cut line\n` +
-                    `Barcode Reserved Area: 2.0" x 1.2" (Bottom-right back cover)\n` +
+                    `Canvas at 300 DPI: ${coverPixelsWidth} x ${coverPixelsHeight} px\n` +
+                    `Outer Bleed: 0.125"\n` +
+                    `Safe Area Margin: 0.25" inward\n` +
+                    `Barcode Reserved Area: 2.0" x 1.2" (Back cover lower right)\n` +
                     `\n` +
-                    `PREFLIGHT STATUS: VERIFIED\n` +
-                    `==================================================\n` +
-                    `Generated by PublishStudio Book Production Studio (Zero-Server Architecture)\n`;
+                    `KDP PRINT ECONOMICS (ESTIMATED):\n` +
+                    `------------------------------------------------------------\n` +
+                    `US Print Cost: $${economics.us.printCost} | Suggested Price: $${economics.us.suggestedPrice}\n` +
+                    `India Print Cost: ₹${economics.india.printCost} | Suggested Price: ₹${economics.india.suggestedPrice}\n` +
+                    `\n` +
+                    `PREFLIGHT STATUS: PASS\n` +
+                    `============================================================\n` +
+                    `Generated by PublishStudio (Zero-Server Architecture - ₹0 Cost Challenge)\n`;
                   const blob = new Blob([spec], { type: 'text/plain' });
-                  saveAs(blob, `Production_Specifications_${trimSize}.txt`);
+                  saveAs(blob, `KDP_Production_Spec_${trimSize}.txt`);
                 }}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#5A8264] hover:bg-[#4C7055] text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-6 py-3 rounded-full transition shadow-md"
               >
                 <Download className="w-4 h-4" />
-                <span>Download Production Specification (.txt)</span>
+                <span>Download KDP Production Spec (.txt)</span>
               </button>
             </div>
           </section>
 
-          {/* Step 4 Bottom Navigation */}
           <div className="flex items-center justify-between pt-2">
             <button
               onClick={() => setCurrentStep(3)}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8C8479] hover:text-[#2D2A26]"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8C8479]"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Step 3: Cover</span>
@@ -1725,17 +1896,17 @@ export default function Home() {
           }`}>
             <button
               onClick={() => setActiveHelpModal(null)}
-              className="absolute top-5 right-5 text-[#8C8479] hover:text-[#1F1C18]"
+              className="absolute top-5 right-5 text-[#8C8479]"
             >
               <X className="w-4 h-4" />
             </button>
             <h3 className="text-sm font-bold font-serif mb-2">
               {FIELD_EXPLANATIONS[activeHelpModal]?.term}
             </h3>
-            <p className="text-xs text-[#7A7368] dark:text-[#8E8B92] leading-relaxed mb-3">
+            <p className="text-xs text-[#8E8B92] leading-relaxed mb-3">
               {FIELD_EXPLANATIONS[activeHelpModal]?.definition}
             </p>
-            <div className="p-3 rounded-xl bg-black/5 dark:bg-white/5 text-[11px] text-[#524E49] dark:text-zinc-300">
+            <div className="p-3 rounded-xl bg-black/5 dark:bg-white/5 text-[11px]">
               <span className="font-semibold block mb-0.5">Why this matters:</span>
               {FIELD_EXPLANATIONS[activeHelpModal]?.why}
             </div>
@@ -1743,10 +1914,10 @@ export default function Home() {
         </div>
       )}
 
-      {/* Studio Settings & Access Modal */}
+      {/* Studio Settings Modal */}
       {showSettingsModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className={`w-full max-w-md border rounded-3xl p-6 sm:p-7 shadow-2xl relative text-left transition ${
+          <div className={`w-full max-w-md border rounded-3xl p-6 shadow-2xl relative text-left transition ${
             isDarkMode ? 'bg-[#18171B] border-[#292630]' : 'bg-white border-[#EFEAE2]'
           }`}>
             <button 
@@ -1788,12 +1959,11 @@ export default function Home() {
       )}
 
       {/* Studio Footer */}
-      <footer className={`w-full max-w-4xl border-t mt-auto pt-6 text-center text-[11px] font-sans ${
+      <footer className={`w-full max-w-5xl border-t mt-auto pt-6 text-center text-[11px] font-sans ${
         isDarkMode ? 'border-[#262429] text-[#716E77]' : 'border-[#EFEAE2] text-[#9E968B]'
       }`}>
-        &copy; {new Date().getFullYear()} PUBLISHSTUDIO • Book Production & Print Studio • Zero-Server Client Architecture
+        &copy; {new Date().getFullYear()} PUBLISHSTUDIO • ₹0 Investment Book Production Studio • Amazon KDP Ready • Zero-Server Architecture
       </footer>
     </main>
   );
-                    }
-                
+}

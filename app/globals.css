@@ -1,29 +1,26 @@
 /* ==========================================================================
-   FILE: app/globals.css
+   FILE: app/globals.css - Color Hunt Palette #F5EFE3 / #4F5B2A / #B8892D
    ========================================================================== */
 
-/* --------------------------------------------------------------------------
-   SECTION 1.0: TAILWIND & GOOGLE FONTS IMPORT
-   -------------------------------------------------------------------------- */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
-/* --------------------------------------------------------------------------
-   SECTION 2.0: BASE RESETS & COLOR LOCKS (HIGH-CONTRAST LIGHT MODE)
-   -------------------------------------------------------------------------- */
 :root {
-  --bg-porcelain: #F4EFE6;
-  --text-dark: #1F1C18;
-  --text-muted: #5A5245;
-  --teal-brand: #0E4D54;
+  --bg-porcelain: #F5EFE3;
+  --text-primary: #1C2010;
+  --text-muted: #4F5B2A;
+  --card-raised: #EFE8D8;
+  --card-inset: #E5DCC9;
+  --accent-gold: #B8892D;
+  --brand-olive: #4F5B2A;
 }
 
 html, body {
-  background-color: #F4EFE6 !important;
-  color: #1F1C18 !important;
+  background-color: #F5EFE3 !important;
+  color: #1C2010 !important;
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   margin: 0;
@@ -34,63 +31,74 @@ html, body {
   font-family: 'Playfair Display', Georgia, serif;
 }
 
-/* --------------------------------------------------------------------------
-   SECTION 3.0: SOFT-UI NEUMORPHIC TOKENS (LIGHT THEME)
-   -------------------------------------------------------------------------- */
+/* Hard-contrast headings & labels */
+h1, h2, h3, h4, h5, h6, strong, b {
+  color: #1C2010 !important;
+}
+
+label, .field-label {
+  color: #363E1C !important;
+  font-weight: 700;
+}
+
+/* Tactile Soft-UI Tokens (Palette 1) */
 .soft-raised {
-  background: #FAF6EE !important;
-  color: #1F1C18 !important;
-  box-shadow: -6px -6px 14px rgba(255, 255, 255, 0.95),
-               6px 6px 14px rgba(184, 172, 155, 0.35) !important;
-  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  background: #FAF6ED !important;
+  color: #1C2010 !important;
+  box-shadow: -5px -5px 12px rgba(255, 255, 255, 0.95),
+               5px 5px 14px rgba(180, 168, 145, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.9) !important;
 }
 
 .soft-inset {
-  background: #EAE3D6 !important;
-  color: #1F1C18 !important;
-  box-shadow: inset 3px 3px 6px rgba(180, 165, 145, 0.45),
+  background: #E8DFC8 !important;
+  color: #1C2010 !important;
+  box-shadow: inset 3px 3px 6px rgba(165, 150, 125, 0.45),
               inset -3px -3px 6px rgba(255, 255, 255, 0.85) !important;
-  border: 1px solid rgba(216, 206, 192, 0.6) !important;
+  border: 1px solid rgba(216, 201, 168, 0.7) !important;
 }
 
 .soft-btn-primary {
-  background: #0E4D54 !important;
+  background: #4F5B2A !important;
   color: #FFFFFF !important;
-  box-shadow: -3px -3px 8px rgba(255, 255, 255, 0.6),
-               4px 4px 10px rgba(14, 77, 84, 0.35) !important;
+  box-shadow: -3px -3px 8px rgba(255, 255, 255, 0.7),
+               4px 4px 10px rgba(79, 91, 42, 0.4) !important;
 }
 .soft-btn-primary:active {
   box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.4) !important;
 }
 
 .soft-btn-pill {
-  background: #FAF6EE !important;
-  color: #1F1C18 !important;
-  box-shadow: -2px -2px 6px rgba(255, 255, 255, 0.85),
-               2px 2px 6px rgba(184, 172, 155, 0.3) !important;
-  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  background: #FAF6ED !important;
+  color: #1C2010 !important;
+  box-shadow: -2px -2px 6px rgba(255, 255, 255, 0.9),
+               2px 2px 6px rgba(180, 168, 145, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
 }
 
-/* --------------------------------------------------------------------------
-   SECTION 4.0: SOFT-UI NEUMORPHIC TOKENS (DARK THEME OVERRIDES)
-   -------------------------------------------------------------------------- */
+.accent-gold-text {
+  color: #B8892D !important;
+}
+
+/* Dark Theme Overrides */
 .dark-canvas {
-  background-color: #111014 !important;
-  color: #EDE8E1 !important;
+  background-color: #12140D !important;
+  color: #EDECE6 !important;
 }
-
+.dark-canvas h1, .dark-canvas h2, .dark-canvas h3, .dark-canvas h4 {
+  color: #FFFFFF !important;
+}
 .dark-soft-raised {
-  background: #18161D !important;
-  color: #EDE8E1 !important;
-  box-shadow: -5px -5px 12px rgba(35, 32, 43, 0.5),
-               5px 5px 14px rgba(0, 0, 0, 0.6) !important;
+  background: #1A1D13 !important;
+  color: #EDECE6 !important;
+  box-shadow: -4px -4px 10px rgba(35, 40, 25, 0.5),
+               4px 4px 12px rgba(0, 0, 0, 0.7) !important;
   border: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
-
 .dark-soft-inset {
-  background: #0E0D11 !important;
-  color: #EDE8E1 !important;
-  box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.6),
-              inset -3px -3px 6px rgba(45, 41, 56, 0.3) !important;
+  background: #0E100A !important;
+  color: #EDECE6 !important;
+  box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.7),
+              inset -2px -2px 5px rgba(50, 58, 30, 0.3) !important;
   border: 1px solid rgba(255, 255, 255, 0.04) !important;
 }

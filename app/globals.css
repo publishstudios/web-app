@@ -3,7 +3,7 @@
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   SECTION 1.0: TAILWIND DIRECTIVES & TYPOGRAPHY FONTS
+   SECTION 1.0: TAILWIND & GOOGLE FONTS IMPORT
    -------------------------------------------------------------------------- */
 @tailwind base;
 @tailwind components;
@@ -12,21 +12,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
 /* --------------------------------------------------------------------------
-   SECTION 2.0: CSS ROOT VARIABLES & BASE CANVAS RESETS
+   SECTION 2.0: BASE RESETS & COLOR LOCKS (HIGH-CONTRAST LIGHT MODE)
    -------------------------------------------------------------------------- */
 :root {
   --bg-porcelain: #F4EFE6;
-  --card-light: #F7F3EC;
-  --inset-light: #EBE5DB;
-  --teal-accent: #0E4D54;
-  --text-primary: #1F1C18;
+  --text-dark: #1F1C18;
+  --text-muted: #5A5245;
+  --teal-brand: #0E4D54;
 }
 
-body {
-  background-color: #F4EFE6;
-  color: #1F1C18;
+html, body {
+  background-color: #F4EFE6 !important;
+  color: #1F1C18 !important;
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0;
 }
 
 .font-editorial {
@@ -34,58 +35,62 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   SECTION 3.0: TACTILE SOFT-UI (LIGHT THEME TOKENS)
+   SECTION 3.0: SOFT-UI NEUMORPHIC TOKENS (LIGHT THEME)
    -------------------------------------------------------------------------- */
 .soft-raised {
-  background: linear-gradient(145deg, #FAF6EE, #EEE8DD);
-  box-shadow: -6px -6px 16px rgba(255, 255, 255, 0.9),
-               6px 6px 16px rgba(184, 172, 155, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: #FAF6EE !important;
+  color: #1F1C18 !important;
+  box-shadow: -6px -6px 14px rgba(255, 255, 255, 0.95),
+               6px 6px 14px rgba(184, 172, 155, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
 }
 
 .soft-inset {
-  background: #EAE3D6;
+  background: #EAE3D6 !important;
+  color: #1F1C18 !important;
   box-shadow: inset 3px 3px 6px rgba(180, 165, 145, 0.45),
-              inset -3px -3px 6px rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(216, 206, 192, 0.6);
+              inset -3px -3px 6px rgba(255, 255, 255, 0.85) !important;
+  border: 1px solid rgba(216, 206, 192, 0.6) !important;
 }
 
 .soft-btn-primary {
-  background: linear-gradient(145deg, #10555D, #0B3F45);
+  background: #0E4D54 !important;
+  color: #FFFFFF !important;
   box-shadow: -3px -3px 8px rgba(255, 255, 255, 0.6),
-               4px 4px 10px rgba(14, 77, 84, 0.35);
-  color: #ffffff;
+               4px 4px 10px rgba(14, 77, 84, 0.35) !important;
 }
 .soft-btn-primary:active {
-  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.4) !important;
 }
 
 .soft-btn-pill {
-  background: linear-gradient(145deg, #FAF6EE, #EFE9DE);
+  background: #FAF6EE !important;
+  color: #1F1C18 !important;
   box-shadow: -2px -2px 6px rgba(255, 255, 255, 0.85),
-               2px 2px 6px rgba(184, 172, 155, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  color: #1F1C18;
+               2px 2px 6px rgba(184, 172, 155, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
 }
 
 /* --------------------------------------------------------------------------
-   SECTION 4.0: TACTILE SOFT-UI (DARK THEME TOKENS)
+   SECTION 4.0: SOFT-UI NEUMORPHIC TOKENS (DARK THEME OVERRIDES)
    -------------------------------------------------------------------------- */
 .dark-canvas {
-  background-color: #111014;
-  color: #EDE8E1;
+  background-color: #111014 !important;
+  color: #EDE8E1 !important;
 }
 
 .dark-soft-raised {
-  background: linear-gradient(145deg, #1B1921, #15141A);
+  background: #18161D !important;
+  color: #EDE8E1 !important;
   box-shadow: -5px -5px 12px rgba(35, 32, 43, 0.5),
-               5px 5px 14px rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+               5px 5px 14px rgba(0, 0, 0, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
 .dark-soft-inset {
-  background: #0E0D11;
+  background: #0E0D11 !important;
+  color: #EDE8E1 !important;
   box-shadow: inset 3px 3px 6px rgba(0, 0, 0, 0.6),
-              inset -3px -3px 6px rgba(45, 41, 56, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  }
+              inset -3px -3px 6px rgba(45, 41, 56, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+}

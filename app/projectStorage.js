@@ -1,9 +1,18 @@
-// app/projectStorage.js
+// ==========================================================================
+// FILE: app/projectStorage.js
+// ==========================================================================
+
+/* --------------------------------------------------------------------------
+   SECTION 1.0: DATABASE CONFIGURATION & CONSTANTS
+   -------------------------------------------------------------------------- */
 const DB_NAME = 'PublishStudioDB';
 const DB_VERSION = 1;
 const STORE_PROJECTS = 'projects';
 const STORE_REVIEWS = 'reviews';
 
+/* --------------------------------------------------------------------------
+   SECTION 2.0: DATABASE INITIALIZATION PROMISE
+   -------------------------------------------------------------------------- */
 function openDatabase() {
   return new Promise((resolve, reject) => {
     if (typeof window === 'undefined') return reject(new Error('Browser only'));
@@ -24,15 +33,15 @@ function openDatabase() {
   });
 }
 
+/* --------------------------------------------------------------------------
+   SECTION 3.0: PROJECT OPERATIONS (SAVE, GET ALL, DELETE)
+   -------------------------------------------------------------------------- */
 export async function saveProjectToStorage(project) {
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_PROJECTS, 'readwrite');
     const store = tx.objectStore(STORE_PROJECTS);
-    store.put({
-      ...project,
-      updatedAt: Date.now()
-    });
+    store.put({ ...project, updatedAt: Date.now() });
     tx.oncomplete = () => resolve(true);
     tx.onerror = () => reject(tx.error);
   });
@@ -60,6 +69,9 @@ export async function deleteProjectFromStorage(id) {
   });
 }
 
+/* --------------------------------------------------------------------------
+   SECTION 4.0: REVIEW & RATING OPERATIONS
+   -------------------------------------------------------------------------- */
 export async function recordReviewToStorage(review) {
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
@@ -80,4 +92,4 @@ export async function getAllReviewsFromStorage() {
     request.onsuccess = () => resolve(request.result || []);
     request.onerror = () => reject(request.error);
   });
-    }
+}

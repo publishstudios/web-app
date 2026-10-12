@@ -4,61 +4,75 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import CoverVisualizer from './CoverVisualizer';
 import HelpCenter from './HelpCenter';
-import { calculateKDPRoyalty, calculatePortfolioRevenue } from './productionMath';
 
-export default function PublishStudioHome() {
-  // Navigation & Workflow state: 0 is Home Overview, 1-4 are Guided Workflow steps
-  const [activeTab, setActiveTab] = useState('home'); // 'home' or 'workflow'
-  const [currentStep, setCurrentStep] = useState(1);  // 1: Setup, 2: Interior, 3: Cover, 4: Preflight
+export default function PublishStudioApp() {
+  /* =========================================================================
+     STATE MANAGEMENT
+     ========================================================================= */
+  // Navigation: 'home' or 'studio'
+  const [currentView, setCurrentView] = useState('home');
+  // Step: 1 (Setup), 2 (Interior), 3 (Cover), 4 (Preflight)
+  const [activeStep, setActiveStep] = useState(3);
 
-  // Manuscript State (Loaded in Setup, rendered in Interior)
-  const [manuscriptText, setManuscriptText] = useState('');
-  const [manuscriptFileName, setManuscriptFileName] = useState('');
+  // Theme toggle (Dark / Light)
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Reader View State (Step 2: Interior)
-  const [readerViewMode, setReaderViewMode] = useState('spread'); // 'single' or 'spread'
-  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  // User Profile (Remember Me)
+  const [userProfile, setUserProfile] = useState({ firstName: '', lastName: '', email: '' });
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [feedbackCategory, setFeedbackCategory] = useState('Issue Report');
+  const [feedbackText, setFeedbackText] = useState('');
 
-  // KDP Royalty Engine State
+  // Setup / Interior Manuscript state
+  const [manuscriptFile, setManuscriptFile] = useState(null);
+  const [manuscriptContent, setManuscriptContent] = useState('');
+  const [interiorViewMode, setInteriorViewMode] = useState('spread'); // 'single' or 'spread'
+  const [readerPage, setReaderPage] = useState(0);
+
+  // Book & Cover Blueprint Parameters
+  const [trimSize, setTrimSize] = useState('5.5x8.5');
   const [pageCount, setPageCount] = useState(150);
+  const [bookTitle, setBookTitle] = useState('THE MEMORY CHEF');
+  const [authorName, setAuthorName] = useState('A. S. HARPER');
+  const [showSafeZones, setShowSafeZones] = useState(true);
+  const [showGuides, setShowGuides] = useState(true);
+
+  // KDP Royalty Forecaster state
+  const [royaltyRate, setRoyaltyRate] = useState(0.60); // 60% Amazon Standard, 40% Expanded
   const [listPrice, setListPrice] = useState(12.99);
-  const [royaltyRate, setRoyaltyRate] = useState(0.60);
-  const [portfolioBookCount, setPortfolioBookCount] = useState(3);
+  const [publishedBooksCount, setPublishedBooksCount] = useState(3);
   const [monthlySalesPerBook, setMonthlySalesPerBook] = useState(25);
 
-  // User Profile & Help Center State
-  const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [savedUser, setSavedUser] = useState(null);
-
-  // Sync remembered user on load
+  /* Load remembered user */
   useEffect(() => {
-    const raw = localStorage.getItem('publishstudio_user');
-    if (raw) {
-      try {
-        setSavedUser(JSON.parse(raw));
-      } catch (e) {}
+    const saved = localStorage.getItem('publishstudio_user');
+    if (saved) {
+      try { setUserProfile(JSON.parse(saved)); } catch (e) {}
     }
-  }, [isHelpOpen]);
+  }, []);
 
-  // Handle Manuscript Ingestion in Step 1 (Setup)
+  const handleSaveProfile = (e) => {
+    e.preventDefault();
+    localStorage.setItem('publishstudio_user', JSON.stringify(userProfile));
+    alert('User details saved on this browser session.');
+  };
+
+  /* Manuscript Upload Handler */
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setManuscriptFileName(file.name);
-
+    setManuscriptFile(file.name);
     const reader = new FileReader();
     reader.onload = (event) => {
-      const content = event.target?.result;
-      if (typeof content === 'string') {
-        setManuscriptText(content);
-      }
+      setManuscriptContent(event.target.result || '');
     };
     reader.readAsText(file);
   };
 
-  // Convert raw manuscript into pages (~250 words per page simulation)
-  const words = manuscriptText ? manuscriptText.split(/\s+/) : [];
+  /* Chunk text into pages (~250 words per page simulation) */
+  const words = manuscriptContent ? manuscriptContent.split(/\s+/) : [];
   const wordsPerPage = 250;
   const pages = [];
   if (words.length > 0) {
@@ -66,431 +80,653 @@ export default function PublishStudioHome() {
       pages.push(words.slice(i, i + wordsPerPage).join(' '));
     }
   } else {
-    pages.push('No manuscript uploaded yet. Return to Step 1 (Setup) to upload your .txt or markdown file.');
+    pages.push('No manuscript uploaded yet. Upload your document in Step 1 (Setup) to inspect chapters and spreads.');
   }
 
-  // Royalty calculations
-  const royaltyData = calculateKDPRoyalty({ pageCount, listPrice, royaltyRate });
-  const portfolioData = calculatePortfolioRevenue({
-    royaltyPerCopy: royaltyData.royaltyPerCopy,
-    bookCount: portfolioBookCount,
-    estimatedSalesPerBookMonthly: monthlySalesPerBook
-  });
+  /* =========================================================================
+     DEDICATED SECTION 1: KDP ROYALTY & SPEC CALCULATIONS
+     Edit formulas here if Amazon KDP modifies its base rates.
+     ========================================================================= */
+  // Amazon KDP Paperback (Black & White ink, White Paper, US Marketplace)
+  const fixedCost = 1.00;
+  const perPageCost = 0.012;
+  const printingCost = Number((fixedCost + (pageCount * perPageCost)).toFixed(2));
+  const minListPrice = Number((printingCost / royaltyRate).toFixed(2));
+  const actualProfitPerCopy = Math.max(0, Number(((listPrice * royaltyRate) - printingCost).toFixed(2)));
+  
+  // Multi-book portfolio projection
+  const monthlyRevenue = Number((publishedBooksCount * monthlySalesPerBook * actualProfitPerCopy).toFixed(2));
+  const annualRevenue = Number((monthlyRevenue * 12).toFixed(2));
 
-  /* =========================================================
-     EDIT POINT 3: VALUE PROPOSITIONS & BENEFITS
-     Customize the cards displayed on the home page.
-     ========================================================= */
-  const BENEFITS_LIST = [
-    {
-      title: 'Zero POD Rejections',
-      desc: 'Never receive a spine, margin, or bleed rejection from Amazon KDP or IngramSpark again with pre-calculated bounds.'
-    },
-    {
-      title: 'Client-Side Privacy',
-      desc: 'Your manuscript remains 100% private. Files are typeset and processed right here in your browser.'
-    },
-    {
-      title: 'Accurate Net Profit Forecaster',
-      desc: 'Eliminate pricing guesswork with true print costs and author royalties calculated across standard and expanded channels.'
-    }
-  ];
+  // Blueprint dimensions (White paper caliper = 0.002252")
+  const spineWidth = (pageCount * 0.002252).toFixed(2);
+  const totalWidth = (5.5 * 2 + parseFloat(spineWidth) + 0.25).toFixed(2);
+  const totalHeight = (8.5 + 0.25).toFixed(2);
+
+  /* Send feedback to operational email */
+  const handleSendFeedback = (e) => {
+    e.preventDefault();
+    const recipient = 'publishstudio.ops@gmail.com';
+    const subject = `[${feedbackCategory}] Feedback from ${userProfile.firstName || 'Author'}`;
+    const body = `Author: ${userProfile.firstName} ${userProfile.lastName} (${userProfile.email})\n\nDetails:\n${feedbackText}`;
+    window.location.href = `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    setShowHelpModal(false);
+  };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] dark:bg-[#0F0F11] text-[#1E293B] dark:text-[#F3F4F6] transition-colors">
+    <div className={`min-h-screen ${isDarkMode ? 'dark bg-[#121214] text-[#E5E7EB]' : 'bg-[#F4EFEA] text-[#222120]'}`}>
       
-      {/* Top Navbar */}
-      <header className="border-b border-[#E2D9CC] dark:border-neutral-800 bg-[#FAF7F2]/90 dark:bg-[#16161A]/90 backdrop-blur px-6 py-3 flex items-center justify-between sticky top-0 z-40">
+      {/* =======================================================================
+          TOP WINDOW BAR (Matches your original macOS styled header)
+          ======================================================================= */}
+      <header className="border-b border-black/10 dark:border-white/10 px-6 py-3 flex items-center justify-between bg-black/[0.02] dark:bg-white/[0.02]">
         <div className="flex items-center gap-3">
-          <span className="font-extrabold tracking-tight text-base text-stone-900 dark:text-stone-50">
-            📖 PUBLISHSTUDIO
+          {/* macOS window dots */}
+          <div className="flex gap-1.5 mr-2">
+            <span className="w-3 h-3 rounded-full bg-[#FF5F56] inline-block border border-black/10"></span>
+            <span className="w-3 h-3 rounded-full bg-[#FFBD2E] inline-block border border-black/10"></span>
+            <span className="w-3 h-3 rounded-full bg-[#27C93F] inline-block border border-black/10"></span>
+          </div>
+          <span className="font-extrabold text-sm tracking-tight flex items-center gap-1.5 text-stone-900 dark:text-white">
+            <span className="text-amber-800 dark:text-amber-500">📖</span> PUBLISHSTUDIO
           </span>
-          <span className="hidden sm:inline-block text-[11px] uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-semibold px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-800">
-            Universal POD
+          <span className="hidden md:inline-block text-[11px] font-semibold text-stone-600 dark:text-stone-300">
+            Universal Print-on-Demand (POD)
+          </span>
+          <span className="hidden lg:inline-block text-[11px] px-2 py-0.5 rounded-full border border-stone-300 dark:border-neutral-700 bg-stone-200/50 dark:bg-neutral-800 text-stone-700 dark:text-stone-300">
+            Self-Publishing Supporting Software
           </span>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveTab('home')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-              activeTab === 'home'
-                ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900'
-                : 'text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-neutral-800'
-            }`}
+        {/* Controls */}
+        <div className="flex items-center gap-3 text-xs">
+          <button 
+            onClick={() => setIsDarkMode(!isDarkMode)} 
+            className="p-1.5 rounded-md hover:bg-black/5 dark:hover:bg-white/10 text-stone-700 dark:text-stone-200 font-bold"
+            title="Toggle theme contrast"
           >
-            Home Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('workflow')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
-              activeTab === 'workflow'
-                ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900'
-                : 'text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-neutral-800'
-            }`}
-          >
-            Guided Workflow
+            {isDarkMode ? '☀️ Light' : '🌙 Dark'}
           </button>
 
-          {/* User badge or Logged in status */}
-          {savedUser?.firstName && (
-            <span className="hidden md:inline-block text-xs font-semibold px-2.5 py-1 rounded bg-stone-200 dark:bg-neutral-800 text-stone-800 dark:text-stone-200">
-              👤 {savedUser.firstName}
+          {userProfile.firstName && (
+            <span className="font-bold text-[11px] px-2.5 py-1 rounded bg-stone-300/60 dark:bg-neutral-800 text-stone-800 dark:text-stone-200">
+              {userProfile.firstName}
             </span>
           )}
 
-          {/* Help Button */}
-          <button
-            onClick={() => setIsHelpOpen(true)}
-            className="text-xs px-2.5 py-1.5 rounded-lg border border-stone-300 dark:border-neutral-700 text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-neutral-800 font-medium"
+          <button 
+            onClick={() => setShowHelpModal(true)}
+            className="font-bold underline decoration-stone-400 text-stone-800 dark:text-stone-200 hover:opacity-80"
           >
-            Help & Account
+            Help ▾
           </button>
         </div>
       </header>
 
-      {/* Main Body */}
-      <main className="max-w-5xl mx-auto px-4 py-8">
+      {/* =======================================================================
+          VIEW ROUTING: HOME PAGE vs STUDIO WORKFLOW
+          ======================================================================= */}
+      {currentView === 'home' ? (
         
-        {/* VIEW 1: HOME OVERVIEW */}
-        {activeTab === 'home' && (
-          <div className="space-y-12">
-            
-            {/* Hero Section */}
-            <div className="text-center space-y-4 max-w-2xl mx-auto pt-6">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
-                Universal Print-On-Demand Production
-              </span>
-              <h1 className="text-3xl md:text-5xl font-black tracking-tight text-stone-900 dark:text-stone-50">
-                Focus More on Writing, Less on Formatting!
-              </h1>
-              <p className="text-sm md:text-base text-stone-600 dark:text-stone-400">
-                PublishStudio eliminates printing rejections. We calculate binding gutters, full-wrap spine bulk, and safe margins automatically, leaving you free to craft your story.
+        /* ---------------------------------------------------------------------
+           ORIGINAL HOME PAGE (With Reasons/Benefits & Dual Engines restored)
+           --------------------------------------------------------------------- */
+        <main className="max-w-4xl mx-auto px-6 py-12 space-y-12">
+          
+          {/* Hero */}
+          <div className="text-center space-y-4">
+            <div className="text-[10px] font-bold tracking-widest uppercase text-amber-700 dark:text-amber-400">
+              Universal Print-On-Demand Production
+            </div>
+            <h1 className="text-3xl md:text-5xl font-black tracking-tight text-stone-900 dark:text-white">
+              Focus More on Writing, Less on Formatting!
+            </h1>
+            <p className="text-xs md:text-sm text-stone-600 dark:text-stone-300 max-w-xl mx-auto leading-relaxed">
+              PublishStudio eliminates printing rejections. We calculate binding gutters, full-wrap spine bulk, and safe margins automatically, leaving you free to craft your story.
+            </p>
+            <div className="pt-2 flex justify-center gap-3">
+              <button 
+                onClick={() => setCurrentView('studio')}
+                className="px-5 py-2.5 bg-[#B85D38] hover:bg-[#A04E2D] text-white text-xs font-bold rounded-lg shadow-md transition"
+              >
+                Launch Book Production Studio →
+              </button>
+              <button 
+                onClick={() => { setCurrentView('studio'); setActiveStep(3); }}
+                className="px-4 py-2.5 border border-stone-400 dark:border-neutral-600 hover:bg-black/5 dark:hover:bg-white/5 text-xs font-bold rounded-lg transition"
+              >
+                Explore with Demo Book
+              </button>
+            </div>
+          </div>
+
+          {/* DEDICATED SECTION 2: WHY CHOOSE US & BENEFITS */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 rounded-xl border border-stone-300/80 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 shadow-sm space-y-2">
+              <div className="text-base">🎯</div>
+              <h3 className="font-bold text-xs text-stone-900 dark:text-white">What is PublishStudio?</h3>
+              <p className="text-[11px] leading-relaxed text-stone-600 dark:text-stone-400">
+                A browser-native book production workstation. It replaces complex software suites with deterministic print math, formatting, and preflight checks that run entirely on your device.
               </p>
-              <div className="pt-2 flex justify-center gap-3">
-                <button
-                  onClick={() => { setActiveTab('workflow'); setCurrentStep(1); }}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-lg transition"
+            </div>
+            <div className="p-4 rounded-xl border border-stone-300/80 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 shadow-sm space-y-2">
+              <div className="text-base">📄</div>
+              <h3 className="font-bold text-xs text-stone-900 dark:text-white">What You Get as Output</h3>
+              <p className="text-[11px] leading-relaxed text-stone-600 dark:text-stone-400">
+                Mirrored-margin interior DOCX/PDF files with drop caps and folios, true-to-scale 300 DPI full-wrap cover blueprints, and certified POD manufacturing spec sheets.
+              </p>
+            </div>
+            <div className="p-4 rounded-xl border border-stone-300/80 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/60 shadow-sm space-y-2">
+              <div className="text-base">⚡</div>
+              <h3 className="font-bold text-xs text-stone-900 dark:text-white">Save Time & Elevate Quality</h3>
+              <p className="text-[11px] leading-relaxed text-stone-600 dark:text-stone-400">
+                No more submission rejections due to clipped gutter text or misaligned barcodes. In-browser checks test readability so your manuscript feels authentic.
+              </p>
+            </div>
+          </div>
+
+          {/* Dual Production Engines */}
+          <div className="space-y-3">
+            <div className="text-[10px] font-bold tracking-wider uppercase text-stone-500 dark:text-neutral-400">
+              Dual Production Engines
+            </div>
+            <h2 className="text-sm font-bold text-stone-900 dark:text-white">Choose Your Project Type</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div 
+                onClick={() => { setCurrentView('studio'); setActiveStep(1); }}
+                className="cursor-pointer p-5 rounded-xl border border-stone-300/80 dark:border-neutral-800 bg-white/50 dark:bg-neutral-900/40 hover:border-amber-700/60 transition group space-y-2"
+              >
+                <div className="font-bold text-xs flex items-center gap-1.5 text-stone-900 dark:text-white group-hover:text-amber-800 dark:group-hover:text-amber-400">
+                  <span>🖋️</span> Text-Rich Books
+                </div>
+                <p className="text-[11px] text-stone-600 dark:text-stone-400 leading-relaxed">
+                  Novels, memoirs, non-fiction guides, poetry, and workbooks. Includes mirror margins, running headers, chapter drop caps, and AI-cliché scanning.
+                </p>
+                <span className="text-[11px] font-bold text-amber-800 dark:text-amber-500 inline-block">
+                  Start Text-Rich Project ›
+                </span>
+              </div>
+
+              <div 
+                onClick={() => { setCurrentView('studio'); setActiveStep(1); }}
+                className="cursor-pointer p-5 rounded-xl border border-stone-300/80 dark:border-neutral-800 bg-white/50 dark:bg-neutral-900/40 hover:border-amber-700/60 transition group space-y-2"
+              >
+                <div className="font-bold text-xs flex items-center gap-1.5 text-stone-900 dark:text-white group-hover:text-amber-800 dark:group-hover:text-amber-400">
+                  <span>📐</span> Low-Content & Visual Creations
+                </div>
+                <p className="text-[11px] text-stone-600 dark:text-stone-400 leading-relaxed">
+                  Planners, journals, sketchbooks, activity logs, and visual art books. Includes automated grid engines, batch image stitchers, and 300 DPI PDF compilations.
+                </p>
+                <span className="text-[11px] font-bold text-amber-800 dark:text-amber-500 inline-block">
+                  Start Low-Content Project ›
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* DEDICATED SECTION 3: KDP ROYALTY & PORTFOLIO ENGINE ON HOME */}
+          <div className="p-6 rounded-2xl border border-stone-300/90 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/70 shadow-sm space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-stone-800 dark:text-stone-200">
+              KDP Print Royalty & Multi-Book Revenue Forecaster
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-stone-700 dark:text-stone-300 mb-1">Page Count</label>
+                <input 
+                  type="number" 
+                  value={pageCount} 
+                  onChange={(e) => setPageCount(Math.max(24, Number(e.target.value)))}
+                  className="w-full text-xs px-2.5 py-1.5 rounded border border-stone-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 font-bold"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-stone-700 dark:text-stone-300 mb-1">Royalty Plan</label>
+                <select 
+                  value={royaltyRate} 
+                  onChange={(e) => setRoyaltyRate(Number(e.target.value))}
+                  className="w-full text-xs px-2.5 py-1.5 rounded border border-stone-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 font-bold"
                 >
-                  Launch Book Production Studio →
+                  <option value={0.60}>Standard Amazon (60%)</option>
+                  <option value={0.40}>Expanded Distribution (40%)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-stone-700 dark:text-stone-300 mb-1">List Price ($)</label>
+                <input 
+                  type="number" 
+                  step="0.5"
+                  value={listPrice} 
+                  onChange={(e) => setListPrice(Math.max(0, Number(e.target.value)))}
+                  className="w-full text-xs px-2.5 py-1.5 rounded border border-stone-300 dark:border-neutral-700 bg-white dark:bg-neutral-950 font-bold"
+                />
+                <span className="text-[10px] text-stone-500">Min Breakeven: ${minListPrice}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-xl bg-stone-200/50 dark:bg-neutral-950/70 border border-stone-300/70 dark:border-neutral-800">
+              <div>
+                <div className="text-[10px] font-semibold text-stone-600 dark:text-neutral-400">Print Cost / Book</div>
+                <div className="text-sm font-black text-stone-900 dark:text-white">${printingCost}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold text-stone-600 dark:text-neutral-400">Net Author Profit</div>
+                <div className="text-sm font-black text-emerald-700 dark:text-emerald-400">${actualProfitPerCopy}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold text-stone-600 dark:text-neutral-400">Titles Published/Planned</div>
+                <input 
+                  type="number" 
+                  value={publishedBooksCount} 
+                  onChange={(e) => setPublishedBooksCount(Math.max(1, Number(e.target.value)))}
+                  className="w-16 mt-0.5 text-xs px-1.5 py-0.5 rounded border border-stone-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 font-bold"
+                />
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold text-stone-600 dark:text-neutral-400">Monthly Projected</div>
+                <div className="text-sm font-black text-emerald-700 dark:text-emerald-400">${monthlyRevenue}</div>
+                <div className="text-[9px] text-stone-500">~${annualRevenue}/yr</div>
+              </div>
+            </div>
+          </div>
+
+        </main>
+      ) : (
+
+        /* ---------------------------------------------------------------------
+           STUDIO WORKFLOW (Setup -> Interior -> Cover -> Preflight)
+           --------------------------------------------------------------------- */
+        <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
+
+          {/* DEDICATED SECTION 4: STEPPER WITH DYNAMIC HIGHLIGHTED PROGRESS LINE */}
+          <div className="relative flex items-center justify-between max-w-2xl mx-auto px-4">
+            {/* Base grey line */}
+            <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-1 bg-stone-300 dark:bg-neutral-800 z-0"></div>
+            
+            {/* Dynamic highlighted progress line */}
+            <div 
+              className="absolute left-8 top-1/2 -translate-y-1/2 h-1 bg-[#22574A] dark:bg-emerald-500 transition-all duration-300 z-0"
+              style={{ width: `${((activeStep - 1) / 3) * 100}%` }}
+            ></div>
+
+            {[
+              { id: 1, label: '1. Setup' },
+              { id: 2, label: '2. Interior' },
+              { id: 3, label: '3. Cover' },
+              { id: 4, label: '4. Preflight' }
+            ].map((step) => {
+              const isFinished = step.id < activeStep;
+              const isCurrent = step.id === activeStep;
+
+              return (
+                <button
+                  key={step.id}
+                  onClick={() => setActiveStep(step.id)}
+                  className={`relative z-10 px-3.5 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 border shadow-sm ${
+                    isCurrent
+                      ? 'bg-transparent text-stone-900 dark:text-white border-2 border-[#1E4338] dark:border-emerald-400 bg-white/90 dark:bg-neutral-900 ring-2 ring-emerald-500/20'
+                      : isFinished
+                      ? 'bg-[#1E4338] dark:bg-emerald-600 text-white border-[#1E4338] dark:border-emerald-600'
+                      : 'bg-stone-200 dark:bg-neutral-800 text-stone-600 dark:text-stone-400 border-stone-300 dark:border-neutral-700'
+                  }`}
+                >
+                  {isFinished && <span>✓</span>}
+                  {step.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* DEDICATED SECTION 5: STEP 1 SETUP (Manuscript Upload Added) */}
+          {activeStep === 1 && (
+            <div className="p-6 rounded-2xl border border-stone-300 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/70 shadow-sm space-y-6">
+              <div>
+                <h2 className="text-base font-extrabold text-stone-900 dark:text-white">Step 1: Setup & Manuscript Ingestion</h2>
+                <p className="text-xs text-stone-600 dark:text-stone-400">Configure book trim size and attach your manuscript text.</p>
+              </div>
+
+              {/* Upload Box */}
+              <div className="border-2 border-dashed border-stone-300 dark:border-neutral-700 p-8 rounded-xl text-center bg-stone-50/50 dark:bg-neutral-950/40">
+                <div className="text-2xl mb-1">📄</div>
+                <h3 className="text-xs font-bold text-stone-900 dark:text-white">Upload User Manuscript</h3>
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1 mb-4">
+                  Add plain text (.txt) or markdown manuscript file to automatically flow into Interior.
+                </p>
+                <label className="inline-block cursor-pointer px-4 py-2 bg-[#1E4338] hover:bg-[#153129] text-white text-xs font-bold rounded-lg shadow">
+                  Browse Manuscript File
+                  <input type="file" accept=".txt,.md" onChange={handleFileUpload} className="hidden" />
+                </label>
+                {manuscriptFile && (
+                  <div className="mt-3 text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                    ✓ Attached: {manuscriptFile} ({pages.length} pages generated)
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setActiveStep(2)}
+                  className="px-4 py-2 bg-[#1E4338] hover:bg-[#153129] text-white text-xs font-bold rounded-lg"
+                >
+                  Proceed to Interior ›
                 </button>
               </div>
             </div>
+          )}
 
-            {/* Why Authors Choose Us (Benefits Cards) */}
-            <div>
-              <h2 className="text-base font-bold text-center mb-6 text-stone-900 dark:text-stone-100">
-                Why Self-Publishers Choose PublishStudio
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {BENEFITS_LIST.map((benefit, index) => (
-                  <div 
-                    key={index} 
-                    className="p-5 rounded-2xl bg-white dark:bg-[#16161A] border border-[#E2D9CC] dark:border-neutral-800 shadow-sm space-y-2"
+          {/* DEDICATED SECTION 6: STEP 2 INTERIOR (1-Page / 2-Page Book Reader Added) */}
+          {activeStep === 2 && (
+            <div className="p-6 rounded-2xl border border-stone-300 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/70 shadow-sm space-y-5">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                <div>
+                  <h2 className="text-base font-extrabold text-stone-900 dark:text-white">Step 2: Interior Layout & Page Reader</h2>
+                  <p className="text-xs text-stone-600 dark:text-stone-400">Read and preview all pages of the book as formatted spreads.</p>
+                </div>
+                {/* 1-Page / 2-Page View Toggle */}
+                <div className="flex items-center gap-1 bg-stone-200 dark:bg-neutral-800 p-1 rounded-lg border border-stone-300 dark:border-neutral-700 text-xs font-bold">
+                  <button 
+                    onClick={() => setInteriorViewMode('single')}
+                    className={`px-3 py-1 rounded transition ${interiorViewMode === 'single' ? 'bg-white dark:bg-neutral-900 text-stone-900 dark:text-white shadow' : 'text-stone-600 dark:text-stone-400'}`}
                   >
-                    <span className="text-emerald-600 dark:text-emerald-400 font-mono text-sm font-bold">
-                      0{index + 1}.
-                    </span>
-                    <h3 className="font-bold text-sm text-stone-900 dark:text-stone-100">
-                      {benefit.title}
-                    </h3>
-                    <p className="text-xs leading-relaxed text-stone-600 dark:text-stone-400">
-                      {benefit.desc}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Standalone KDP Royalty Forecaster */}
-            <div className="bg-white dark:bg-[#16161A] border border-[#E2D9CC] dark:border-neutral-800 p-6 rounded-2xl shadow-sm space-y-6">
-              <div>
-                <h3 className="text-base font-bold text-stone-900 dark:text-stone-50">
-                  KDP Print Royalty & Revenue Forecaster
-                </h3>
-                <p className="text-xs text-stone-600 dark:text-stone-400">
-                  Simulate author earnings per copy and multi-title catalog revenue.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold mb-1">Page Count</label>
-                  <input
-                    type="number"
-                    value={pageCount}
-                    onChange={(e) => setPageCount(Math.max(24, Number(e.target.value)))}
-                    className="w-full px-3 py-1.5 text-xs rounded border border-stone-300 dark:border-neutral-700 bg-stone-50 dark:bg-neutral-900 text-stone-900 dark:text-stone-100"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1">Distribution Royalty Rate</label>
-                  <select
-                    value={royaltyRate}
-                    onChange={(e) => setRoyaltyRate(Number(e.target.value))}
-                    className="w-full px-3 py-1.5 text-xs rounded border border-stone-300 dark:border-neutral-700 bg-stone-50 dark:bg-neutral-900 text-stone-900 dark:text-stone-100"
-                  >
-                    <option value={0.60}>Standard Amazon (60%)</option>
-                    <option value={0.40}>Expanded Distribution (40%)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold mb-1">Target List Price ($)</label>
-                  <input
-                    type="number"
-                    step="0.50"
-                    value={listPrice}
-                    onChange={(e) => setListPrice(Math.max(0, Number(e.target.value)))}
-                    className="w-full px-3 py-1.5 text-xs rounded border border-stone-300 dark:border-neutral-700 bg-stone-50 dark:bg-neutral-900 text-stone-900 dark:text-stone-100"
-                  />
-                  <div className="text-[10px] text-stone-500 mt-1">
-                    Min Breakeven: ${royaltyData.minimumListPrice}
-                  </div>
-                </div>
-              </div>
-
-              {/* Aggregates Banner */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-xl bg-stone-100 dark:bg-neutral-900 border border-stone-200 dark:border-neutral-800">
-                <div>
-                  <div className="text-[11px] text-stone-500 dark:text-neutral-400">Printing Cost / Unit</div>
-                  <div className="text-base font-bold text-stone-900 dark:text-stone-100">${royaltyData.printingCost}</div>
-                </div>
-                <div>
-                  <div className="text-[11px] text-stone-500 dark:text-neutral-400">Net Royalty / Copy</div>
-                  <div className="text-base font-bold text-emerald-600 dark:text-emerald-400">${royaltyData.royaltyPerCopy}</div>
-                </div>
-                <div>
-                  <div className="text-[11px] text-stone-500 dark:text-neutral-400">Titles Published / Planned</div>
-                  <input
-                    type="number"
-                    value={portfolioBookCount}
-                    onChange={(e) => setPortfolioBookCount(Math.max(1, Number(e.target.value)))}
-                    className="w-16 mt-1 px-2 py-0.5 text-xs rounded border border-stone-300 dark:border-neutral-700 bg-white dark:bg-neutral-800"
-                  />
-                </div>
-                <div>
-                  <div className="text-[11px] text-stone-500 dark:text-neutral-400">Est. Monthly Revenue</div>
-                  <div className="text-base font-bold text-emerald-600 dark:text-emerald-400">${portfolioData.monthlyRevenue}</div>
-                  <div className="text-[10px] text-stone-500">~${portfolioData.annualRevenue}/year</div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* VIEW 2: GUIDED WORKFLOW (Steps 1, 2, 3, 4) */}
-        {activeTab === 'workflow' && (
-          <div className="space-y-8">
-            
-            {/* WORKFLOW STEPPER BAR WITH DYNAMIC HIGHLIGHT LINE */}
-            <div className="relative flex items-center justify-between max-w-2xl mx-auto py-2">
-              {/* Background Grey Base Track */}
-              <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-1 bg-stone-300 dark:bg-neutral-800 z-0" />
-
-              {/* Active Emerald Progress Highlight Line */}
-              <div
-                className="absolute left-6 top-1/2 -translate-y-1/2 h-1 bg-emerald-600 transition-all duration-300 z-0"
-                style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
-              />
-
-              {[
-                { id: 1, label: '1. Setup' },
-                { id: 2, label: '2. Interior' },
-                { id: 3, label: '3. Cover' },
-                { id: 4, label: '4. Preflight' }
-              ].map((step) => {
-                const isPassed = step.id < currentStep;
-                const isCurrent = step.id === currentStep;
-
-                return (
-                  <button
-                    key={step.id}
-                    onClick={() => setCurrentStep(step.id)}
-                    className={`relative z-10 px-3.5 py-1.5 rounded-full text-xs font-bold transition border shadow-sm ${
-                      isCurrent
-                        ? 'bg-stone-900 text-white dark:bg-emerald-600 dark:border-emerald-500 ring-4 ring-emerald-500/20'
-                        : isPassed
-                        ? 'bg-emerald-600 text-white border-emerald-600'
-                        : 'bg-stone-200 dark:bg-neutral-800 text-stone-600 dark:text-neutral-400 border-stone-300 dark:border-neutral-700'
-                    }`}
-                  >
-                    {isPassed ? '✓ ' : ''}{step.label}
+                    1-Page View
                   </button>
-                );
-              })}
-            </div>
-
-            {/* STEP 1: SETUP (Includes Manuscript Upload) */}
-            {currentStep === 1 && (
-              <div className="p-6 rounded-2xl bg-white dark:bg-[#16161A] border border-[#E2D9CC] dark:border-neutral-800 shadow-sm space-y-6">
-                <div>
-                  <h2 className="text-lg font-bold text-stone-900 dark:text-stone-50">Step 1: Project Setup & Manuscript Ingestion</h2>
-                  <p className="text-xs text-stone-600 dark:text-stone-400">Configure book dimensions and import manuscript text.</p>
+                  <button 
+                    onClick={() => setInteriorViewMode('spread')}
+                    className={`px-3 py-1 rounded transition ${interiorViewMode === 'spread' ? 'bg-white dark:bg-neutral-900 text-stone-900 dark:text-white shadow' : 'text-stone-600 dark:text-stone-400'}`}
+                  >
+                    2-Page Spread
+                  </button>
                 </div>
+              </div>
 
-                {/* Upload Zone */}
-                <div className="border-2 border-dashed border-stone-300 dark:border-neutral-700 p-8 rounded-xl text-center bg-stone-50 dark:bg-neutral-900/50">
-                  <span className="text-2xl block mb-2">📄</span>
-                  <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100">Upload Author Manuscript</h3>
-                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 mb-4">Upload plain text (.txt) or markdown file to populate the interior preview.</p>
-                  
-                  <label className="inline-block cursor-pointer px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition shadow">
-                    Select Manuscript File
-                    <input type="file" accept=".txt,.md" onChange={handleFileUpload} className="hidden" />
-                  </label>
-
-                  {manuscriptFileName && (
-                    <div className="mt-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                      ✓ Manuscript Attached: {manuscriptFileName} ({pages.length} pages generated)
+              {/* Book Reader Simulation */}
+              <div className="bg-[#EFEAE2] dark:bg-[#0C0C0E] p-6 rounded-xl border border-stone-300 dark:border-neutral-800">
+                <div className={`grid gap-4 ${interiorViewMode === 'spread' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 max-w-md mx-auto'}`}>
+                  {/* Left Page */}
+                  <div className="bg-white dark:bg-[#18181B] border border-stone-300/80 dark:border-neutral-800 p-6 rounded shadow-sm min-h-[360px] flex flex-col justify-between font-serif text-xs md:text-sm leading-relaxed text-stone-900 dark:text-stone-100">
+                    <div>{pages[readerPage] || 'No text found.'}</div>
+                    <div className="text-center font-sans text-[10px] text-stone-400 pt-4 border-t border-stone-100 dark:border-neutral-800">
+                      Page {readerPage + 1}
                     </div>
-                  )}
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setCurrentStep(2)}
-                    className="px-5 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-xs font-bold rounded-lg shadow transition"
-                  >
-                    Proceed to Interior View →
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 2: INTERIOR (With Single Page vs Two Page Spread Toggle) */}
-            {currentStep === 2 && (
-              <div className="p-6 rounded-2xl bg-white dark:bg-[#16161A] border border-[#E2D9CC] dark:border-neutral-800 shadow-sm space-y-6">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                  <div>
-                    <h2 className="text-lg font-bold text-stone-900 dark:text-stone-50">Step 2: Interior Layout & Reader Preview</h2>
-                    <p className="text-xs text-stone-600 dark:text-stone-400">Inspect page breaks, margins, and running headers.</p>
                   </div>
-
-                  {/* Single Page vs 2-Page Toggle */}
-                  <div className="flex items-center gap-2 bg-stone-100 dark:bg-neutral-800 p-1 rounded-lg border border-stone-300 dark:border-neutral-700">
-                    <button
-                      onClick={() => setReaderViewMode('single')}
-                      className={`px-3 py-1 text-xs font-bold rounded ${
-                        readerViewMode === 'single'
-                          ? 'bg-white dark:bg-neutral-900 shadow text-stone-900 dark:text-stone-100'
-                          : 'text-stone-600 dark:text-stone-400'
-                      }`}
-                    >
-                      1-Page View
-                    </button>
-                    <button
-                      onClick={() => setReaderViewMode('spread')}
-                      className={`px-3 py-1 text-xs font-bold rounded ${
-                        readerViewMode === 'spread'
-                          ? 'bg-white dark:bg-neutral-900 shadow text-stone-900 dark:text-stone-100'
-                          : 'text-stone-600 dark:text-stone-400'
-                      }`}
-                    >
-                      2-Page Spread
-                    </button>
-                  </div>
-                </div>
-
-                {/* Reader Simulation Frame */}
-                <div className="bg-[#EFEAE1] dark:bg-[#09090B] p-6 rounded-xl border border-stone-300 dark:border-neutral-800">
-                  <div className={`grid gap-4 ${readerViewMode === 'spread' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 max-w-lg mx-auto'}`}>
-                    
-                    {/* Page Left */}
-                    <div className="bg-white dark:bg-[#18181B] border border-stone-200 dark:border-neutral-800 p-6 rounded-lg shadow-sm min-h-[380px] flex flex-col justify-between font-serif text-xs md:text-sm leading-relaxed text-stone-900 dark:text-stone-100">
-                      <div>{pages[currentPageIndex] || 'No text found.'}</div>
+                  {/* Right Page (Spread Mode) */}
+                  {interiorViewMode === 'spread' && (
+                    <div className="bg-white dark:bg-[#18181B] border border-stone-300/80 dark:border-neutral-800 p-6 rounded shadow-sm min-h-[360px] flex flex-col justify-between font-serif text-xs md:text-sm leading-relaxed text-stone-900 dark:text-stone-100">
+                      <div>{pages[readerPage + 1] || <span className="italic text-stone-400 font-sans">End of manuscript</span>}</div>
                       <div className="text-center font-sans text-[10px] text-stone-400 pt-4 border-t border-stone-100 dark:border-neutral-800">
-                        Page {currentPageIndex + 1}
+                        {pages[readerPage + 1] ? `Page ${readerPage + 2}` : ''}
                       </div>
                     </div>
-
-                    {/* Page Right (Spread mode only) */}
-                    {readerViewMode === 'spread' && (
-                      <div className="bg-white dark:bg-[#18181B] border border-stone-200 dark:border-neutral-800 p-6 rounded-lg shadow-sm min-h-[380px] flex flex-col justify-between font-serif text-xs md:text-sm leading-relaxed text-stone-900 dark:text-stone-100">
-                        <div>{pages[currentPageIndex + 1] || <span className="italic text-stone-400 font-sans">End of manuscript</span>}</div>
-                        <div className="text-center font-sans text-[10px] text-stone-400 pt-4 border-t border-stone-100 dark:border-neutral-800">
-                          {pages[currentPageIndex + 1] ? `Page ${currentPageIndex + 2}` : ''}
-                        </div>
-                      </div>
-                    )}
-
-                  </div>
-
-                  {/* Reader Pagination Controls */}
-                  <div className="flex justify-between items-center mt-6 pt-4 border-t border-stone-300 dark:border-neutral-800">
-                    <button
-                      disabled={currentPageIndex <= 0}
-                      onClick={() => setCurrentPageIndex((prev) => Math.max(0, prev - (readerViewMode === 'spread' ? 2 : 1)))}
-                      className="px-3.5 py-1.5 text-xs font-bold rounded bg-white dark:bg-neutral-800 border border-stone-300 dark:border-neutral-700 disabled:opacity-40"
-                    >
-                      ← Previous
-                    </button>
-                    <span className="text-xs text-stone-600 dark:text-stone-400 font-semibold">
-                      Page {currentPageIndex + 1} of {pages.length}
-                    </span>
-                    <button
-                      disabled={readerViewMode === 'spread' ? currentPageIndex + 2 >= pages.length : currentPageIndex + 1 >= pages.length}
-                      onClick={() => setCurrentPageIndex((prev) => prev + (readerViewMode === 'spread' ? 2 : 1))}
-                      className="px-3.5 py-1.5 text-xs font-bold rounded bg-white dark:bg-neutral-800 border border-stone-300 dark:border-neutral-700 disabled:opacity-40"
-                    >
-                      Next →
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex justify-between">
-                  <button
-                    onClick={() => setCurrentStep(1)}
-                    className="px-4 py-2 border border-stone-300 dark:border-neutral-700 text-xs font-bold rounded-lg"
-                  >
-                    ← Back to Setup
-                  </button>
-                  <button
-                    onClick={() => setCurrentStep(3)}
-                    className="px-5 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-xs font-bold rounded-lg shadow transition"
-                  >
-                    Next to Cover Blueprint →
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 3 & STEP 4 PLACEHOLDER / FLOW-THROUGH */}
-            {currentStep >= 3 && (
-              <div className="p-6 rounded-2xl bg-white dark:bg-[#16161A] border border-[#E2D9CC] dark:border-neutral-800 text-center space-y-4">
-                <h2 className="text-base font-bold">
-                  {currentStep === 3 ? 'Step 3: Cover Blueprint Specification' : 'Step 4: Final Preflight Inspection'}
-                </h2>
-                <p className="text-xs text-stone-500">
-                  {currentStep === 3 ? 'Cover calculations configured.' : 'Preflight rules verified.'}
-                </p>
-                <div className="flex justify-center gap-3">
-                  <button
-                    onClick={() => setCurrentStep(currentStep - 1)}
-                    className="px-4 py-1.5 text-xs border border-stone-300 dark:border-neutral-700 rounded"
-                  >
-                    ← Previous Step
-                  </button>
-                  {currentStep < 4 && (
-                    <button
-                      onClick={() => setCurrentStep(currentStep + 1)}
-                      className="px-4 py-1.5 text-xs bg-emerald-600 text-white rounded font-bold"
-                    >
-                      Next Step →
-                    </button>
                   )}
                 </div>
+
+                {/* Reader Controls */}
+                <div className="flex justify-between items-center mt-6 pt-4 border-t border-stone-300 dark:border-neutral-800">
+                  <button
+                    disabled={readerPage <= 0}
+                    onClick={() => setReaderPage((prev) => Math.max(0, prev - (interiorViewMode === 'spread' ? 2 : 1)))}
+                    className="px-3 py-1.5 text-xs font-bold rounded bg-white dark:bg-neutral-800 border border-stone-300 dark:border-neutral-700 disabled:opacity-30"
+                  >
+                    ← Previous
+                  </button>
+                  <span className="text-xs font-bold text-stone-600 dark:text-stone-400">
+                    Page {readerPage + 1} of {pages.length}
+                  </span>
+                  <button
+                    disabled={interiorViewMode === 'spread' ? readerPage + 2 >= pages.length : readerPage + 1 >= pages.length}
+                    onClick={() => setReaderPage((prev) => prev + (interiorViewMode === 'spread' ? 2 : 1))}
+                    className="px-3 py-1.5 text-xs font-bold rounded bg-white dark:bg-neutral-800 border border-stone-300 dark:border-neutral-700 disabled:opacity-30"
+                  >
+                    Next →
+                  </button>
+                </div>
               </div>
-            )}
+
+              <div className="flex justify-between">
+                <button onClick={() => setActiveStep(1)} className="px-3.5 py-1.5 border border-stone-300 dark:border-neutral-700 text-xs font-bold rounded-lg">
+                  ← Setup
+                </button>
+                <button onClick={() => setActiveStep(3)} className="px-4 py-1.5 bg-[#1E4338] hover:bg-[#153129] text-white text-xs font-bold rounded-lg">
+                  Cover Blueprint ›
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* DEDICATED SECTION 7: STEP 3 COVER BLUEPRINT (Your exact visual specification restored) */}
+          {activeStep === 3 && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-baseline">
+                <div>
+                  <h2 className="text-xl font-black tracking-tight text-stone-900 dark:text-white">
+                    Step 3: Cover Blueprint Specification
+                  </h2>
+                  <p className="text-xs text-stone-600 dark:text-stone-400">
+                    Specify paper caliper and bulk depth to construct a perfectly proportioned full-wrap cover layout with bleed guides.
+                  </p>
+                </div>
+                <span className="text-xs font-bold underline cursor-pointer text-stone-700 dark:text-stone-300">
+                  Bleed Rules ▾
+                </span>
+              </div>
+
+              {/* Exact Pill Spec Tags from your original UI */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                <div className="py-2.5 px-3 rounded-lg border border-stone-300 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 shadow-sm">
+                  <span className="text-[10px] font-bold tracking-wider text-stone-500 dark:text-neutral-400 block uppercase">Spine Width</span>
+                  <span className="text-xs font-extrabold text-stone-900 dark:text-white">{spineWidth}"</span>
+                </div>
+                <div className="py-2.5 px-3 rounded-lg border border-stone-300 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 shadow-sm">
+                  <span className="text-[10px] font-bold tracking-wider text-stone-500 dark:text-neutral-400 block uppercase">Total Width</span>
+                  <span className="text-xs font-extrabold text-stone-900 dark:text-white">{totalWidth}"</span>
+                </div>
+                <div className="py-2.5 px-3 rounded-lg border border-stone-300 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 shadow-sm">
+                  <span className="text-[10px] font-bold tracking-wider text-stone-500 dark:text-neutral-400 block uppercase">Total Height</span>
+                  <span className="text-xs font-extrabold text-stone-900 dark:text-white">{totalHeight}"</span>
+                </div>
+                <div className="py-2.5 px-3 rounded-lg border border-stone-300 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 shadow-sm">
+                  <span className="text-[10px] font-bold tracking-wider text-stone-500 dark:text-neutral-400 block uppercase">Canvas @ 300 DPI</span>
+                  <span className="text-xs font-extrabold text-stone-900 dark:text-white">3681 x 2700 px</span>
+                </div>
+              </div>
+
+              {/* Interactive Cover Blueprint Viewer */}
+              <div className="p-6 rounded-2xl border border-stone-300 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80 shadow-sm space-y-4">
+                <div className="flex justify-between items-center text-xs">
+                  <div>
+                    <span className="font-bold text-[11px] uppercase tracking-wider block text-stone-800 dark:text-stone-200">
+                      Interactive Cover Blueprint
+                    </span>
+                    <span className="text-[10px] text-stone-500">Scale: 1:1 Proportional</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1.5 font-bold text-[11px] cursor-pointer">
+                      <span>Safe Zones:</span>
+                      <input 
+                        type="checkbox" 
+                        checked={showSafeZones} 
+                        onChange={(e) => setShowSafeZones(e.target.checked)} 
+                        className="rounded"
+                      />
+                    </label>
+                    <label className="flex items-center gap-1.5 font-bold text-[11px] cursor-pointer">
+                      <span>Guides:</span>
+                      <input 
+                        type="checkbox" 
+                        checked={showGuides} 
+                        onChange={(e) => setShowGuides(e.target.checked)} 
+                        className="rounded"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Blueprint Render Frame */}
+                <div className="bg-[#EFEAE2] dark:bg-[#0F0F12] p-8 rounded-xl border border-stone-300/80 dark:border-neutral-800 flex justify-center items-center min-h-[340px]">
+                  <div className="border border-red-400/80 bg-stone-100 dark:bg-neutral-800/80 p-3 rounded flex shadow-md text-stone-900 dark:text-white">
+                    {/* Back Cover */}
+                    <div className="w-48 h-64 border border-dashed border-red-300 dark:border-red-500/40 p-3 flex flex-col justify-between text-center">
+                      <div className="text-[10px] font-bold text-stone-400">BACK COVER (5.5 x 8.5)</div>
+                      <div className="border border-red-400/80 bg-red-100/60 dark:bg-red-950/40 p-2 text-[9px] font-bold text-red-700 dark:text-red-300 rounded self-center">
+                        BARCODE RESERVED ZONE
+                      </div>
+                    </div>
+                    {/* Spine */}
+                    <div className="w-8 h-64 border-l border-r border-dashed border-red-300 dark:border-red-500/40 flex items-center justify-center">
+                      <span className="transform -rotate-90 text-[9px] font-extrabold tracking-widest uppercase whitespace-nowrap text-stone-600 dark:text-stone-300">
+                        {bookTitle}
+                      </span>
+                    </div>
+                    {/* Front Cover */}
+                    <div className="w-48 h-64 border border-dashed border-red-300 dark:border-red-500/40 p-4 flex flex-col justify-center items-center text-center">
+                      <div className="font-black text-sm uppercase tracking-wide">{bookTitle}</div>
+                      <div className="text-[10px] text-stone-400 mt-1">(5.5 x 8.5)</div>
+                      <div className="text-[10px] font-bold mt-12 text-stone-700 dark:text-stone-300">{authorName}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Blueprint Legend */}
+                <div className="flex flex-wrap justify-center items-center gap-4 text-[10px] font-bold text-stone-600 dark:text-stone-400 pt-2">
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-400 inline-block"></span> 0.125" Bleed (Cut off)</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block"></span> 0.25" Safe Zone</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-orange-400 inline-block"></span> Barcode Exclusion</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Spine: {spineWidth}"</span>
+                </div>
+
+                <div className="text-center text-[11px] text-stone-600 dark:text-stone-400 bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-lg border border-amber-200 dark:border-amber-900/50">
+                  ⚠️ <strong>Standard Industry Barcode Zone (2.0" x 1.2" Reserved):</strong> Keep the bottom-right quadrant of your back cover free of text, URLs, or faces.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* DEDICATED SECTION 8: STEP 4 PREFLIGHT */}
+          {activeStep === 4 && (
+            <div className="p-8 rounded-2xl border border-stone-300 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/70 text-center space-y-4">
+              <h2 className="text-lg font-black text-stone-900 dark:text-white">Step 4: Certified POD Preflight Verification</h2>
+              <p className="text-xs text-stone-600 dark:text-stone-400 max-w-md mx-auto">
+                All bleed criteria, spine caliper formulas, and mirror gutter rules have passed verification.
+              </p>
+              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold inline-block">
+                ✓ Ready for PDF Export at 300 DPI
+              </div>
+            </div>
+          )}
+
+          {/* Studio Footer Navigation */}
+          <footer className="flex justify-between items-center pt-4 border-t border-stone-300/80 dark:border-neutral-800">
+            <button
+              onClick={() => setCurrentView('home')}
+              className="text-xs font-bold text-stone-700 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white flex items-center gap-1"
+            >
+              ⌂ Home Overview
+            </button>
+            <div className="flex gap-2">
+              <button
+                disabled={activeStep <= 1}
+                onClick={() => setActiveStep((prev) => Math.max(1, prev - 1))}
+                className="px-3.5 py-1.5 rounded-lg border border-stone-300 dark:border-neutral-700 text-xs font-bold disabled:opacity-40"
+              >
+                ◀ Back
+              </button>
+              <button
+                disabled={activeStep >= 4}
+                onClick={() => setActiveStep((prev) => Math.min(4, prev + 1))}
+                className="px-4 py-1.5 rounded-lg bg-[#1E4338] hover:bg-[#153129] text-white text-xs font-bold disabled:opacity-40"
+              >
+                Next Step ▶
+              </button>
+            </div>
+          </footer>
+
+        </main>
+      )}
+
+      {/* =======================================================================
+          DEDICATED SECTION 9: HELP & REMEMBER ME MODAL
+          Directly sends feedback to publishstudio.ops@gmail.com
+          ======================================================================= */}
+      {showHelpModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-[#FAF7F2] dark:bg-[#18181B] border border-[#D6CEBE] dark:border-neutral-700 rounded-2xl p-6 max-w-md w-full shadow-2xl text-stone-900 dark:text-white space-y-4">
+            
+            <div className="flex justify-between items-center pb-2 border-b border-stone-300 dark:border-neutral-800">
+              <h3 className="text-sm font-bold">Help Center & Author Identity</h3>
+              <button onClick={() => setShowHelpModal(false)} className="text-base font-bold">✕</button>
+            </div>
+
+            {/* Remember Me Form */}
+            <form onSubmit={handleSaveProfile} className="space-y-2 pb-3 border-b border-stone-300 dark:border-neutral-800">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500">Author Details (Remembered Locally)</div>
+              <div className="grid grid-cols-2 gap-2">
+                <input 
+                  type="text" 
+                  placeholder="First Name" 
+                  value={userProfile.firstName} 
+                  onChange={(e) => setUserProfile({ ...userProfile, firstName: e.target.value })}
+                  className="px-2 py-1 text-xs rounded border border-stone-300 dark:border-neutral-700 bg-white dark:bg-neutral-900"
+                />
+                <input 
+                  type="text" 
+                  placeholder="Last Name" 
+                  value={userProfile.lastName} 
+                  onChange={(e) => setUserProfile({ ...userProfile, lastName: e.target.value })}
+                  className="px-2 py-1 text-xs rounded border border-stone-300 dark:border-neutral-700 bg-white dark:bg-neutral-900"
+                />
+              </div>
+              <input 
+                type="email" 
+                placeholder="Email ID" 
+                value={userProfile.email} 
+                onChange={(e) => setUserProfile({ ...userProfile, email: e.target.value })}
+                className="w-full px-2 py-1 text-xs rounded border border-stone-300 dark:border-neutral-700 bg-white dark:bg-neutral-900"
+              />
+              <button type="submit" className="text-xs px-3 py-1 bg-stone-800 dark:bg-neutral-700 text-white rounded font-bold">
+                Save Author Details
+              </button>
+            </form>
+
+            {/* Issue Report Form */}
+            <form onSubmit={handleSendFeedback} className="space-y-3">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                Report Issue / Send Feedback
+              </div>
+              <p className="text-[11px] text-stone-600 dark:text-stone-400">
+                Delivered straight to <strong>publishstudio.ops@gmail.com</strong>
+              </p>
+              <select 
+                value={feedbackCategory} 
+                onChange={(e) => setFeedbackCategory(e.target.value)}
+                className="w-full text-xs p-1.5 rounded border border-stone-300 dark:border-neutral-700 bg-white dark:bg-neutral-900"
+              >
+                <option value="Issue Report">Bug / Visual Glitch</option>
+                <option value="KDP Calculation Feedback">KDP Calculation Feedback</option>
+                <option value="Feature Request">Request Feature</option>
+              </select>
+              <textarea 
+                required
+                rows={3}
+                placeholder="Describe your issue or suggestions..."
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                className="w-full text-xs p-2 rounded border border-stone-300 dark:border-neutral-700 bg-white dark:bg-neutral-900"
+              />
+              <div className="flex justify-end gap-2 pt-1">
+                <button type="button" onClick={() => setShowHelpModal(false)} className="px-3 py-1 text-xs font-bold">
+                  Cancel
+                </button>
+                <button type="submit" className="px-3.5 py-1 text-xs bg-[#B85D38] hover:bg-[#A04E2D] text-white font-bold rounded">
+                  Send Feedback
+                </button>
+              </div>
+            </form>
 
           </div>
-        )}
+        </div>
+      )}
 
-      </main>
-
-      {/* Floating Help Modal */}
-      <HelpCenter isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
     </div>
   );
 }

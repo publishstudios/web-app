@@ -11,7 +11,7 @@ import {
   Book, BookOpen, HelpCircle, Sun, Moon, Sparkles, Download, 
   ArrowRight, ArrowLeft, CheckCircle2, 
   Eye, Sliders, Layers, FolderOpen, Trash2, X, Globe, Upload, CheckSquare, Square,
-  Cpu, Calendar
+  Cpu, Calendar, FileText, Check
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import HelpCenter from './HelpCenter';
@@ -98,6 +98,8 @@ export default function PublishStudioApp() {
   /* SECTION 3.4: CLIENT-SIDE AI API INTEGRATION (BYOK) */
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [userApiKey, setUserApiKey] = useState('');
+  const [aiContentType, setAiContentType] = useState('chapter'); // 'chapter' | 'outline' | 'planner' | 'habits'
+  const [aiCustomPrompt, setAiCustomPrompt] = useState('');
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
   /* SECTION 3.5: COVER ASSETS (STEP 3) */
@@ -115,7 +117,7 @@ export default function PublishStudioApp() {
 
   // Annual Velocity & Trajectory State
   const [initialMonthlySales, setInitialMonthlySales] = useState(50);
-  const [monthlyGrowthRate, setMonthlyGrowthRate] = useState(0); // -10% to +25%
+  const [monthlyGrowthRate, setMonthlyGrowthRate] = useState(5); // e.g., +5% per month
 
   /* SECTION 3.7: PERSISTENCE & MODALS */
   const [savedProjects, setSavedProjects] = useState([]);
@@ -131,8 +133,7 @@ export default function PublishStudioApp() {
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewFeedback, setReviewFeedback] = useState('');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
-
-  const refreshProjectsList = async () => {
+       const refreshProjectsList = async () => {
     try {
       const list = await getAllProjectsFromStorage();
       setSavedProjects(list);
@@ -177,6 +178,7 @@ export default function PublishStudioApp() {
 
   const coverPixelsWidth = useMemo(() => Math.round(fullCoverWidth * 300), [fullCoverWidth]);
   const coverPixelsHeight = useMemo(() => Math.round(fullCoverHeight * 300), [fullCoverHeight]);
+
   /* SECTION 3.9: AUTO-FX CONVERTER & DUAL-FORMAT ROYALTY ENGINE */
   const handleUsPriceChange = (val, type = 'paperback') => {
     if (type === 'paperback') {
@@ -233,7 +235,7 @@ export default function PublishStudioApp() {
     return territoryCalculations.filter(t => selectedKdpCountries.includes(t.code));
   }, [territoryCalculations, selectedKdpCountries]);
 
-  // 12-Month Trajectory & Annual Report Engine
+  // Transparent Trajectory Engine with Month 1, Month 6, and Month 12 data
   const annualReportData = useMemo(() => {
     const totalUsdRoyaltyPerUnit = activeSelectedTerritories.reduce((acc, curr) => acc + curr.usdEquivalentRoyalty, 0);
 
@@ -241,14 +243,22 @@ export default function PublishStudioApp() {
       let totalUnits = 0;
       let totalUsdEarned = 0;
       let currentUnits = startUnits;
+      let m1Units = Math.round(startUnits);
+      let m6Units = 0;
+      let m12Units = 0;
 
       for (let month = 1; month <= 12; month++) {
+        if (month === 6) m6Units = Math.round(currentUnits);
+        if (month === 12) m12Units = Math.round(currentUnits);
         totalUnits += Math.round(currentUnits);
         totalUsdEarned += currentUnits * totalUsdRoyaltyPerUnit;
         currentUnits = Math.max(1, currentUnits * (1 + monthlyGrowthRate / 100));
       }
 
       return {
+        m1Units,
+        m6Units,
+        m12Units,
         annualUnits: Math.round(totalUnits),
         annualUsd: Math.round(totalUsdEarned),
         annualInr: Math.round(totalUsdEarned * 85)
@@ -261,28 +271,32 @@ export default function PublishStudioApp() {
       scaled: calculateTrajectory(Math.round(initialMonthlySales * 5))
     };
   }, [activeSelectedTerritories, initialMonthlySales, monthlyGrowthRate]);
-
-  /* SECTION 3.10: BYOK CLIENT-SIDE AI GENERATOR */
+  /* SECTION 3.10: FULL AI ENGINE (BOOK DRAFTER & LOW-CONTENT BUILDER) */
   const handleGenerateAiContent = async () => {
     if (!userApiKey.trim()) {
-      alert('Please enter your API Key to generate content.');
+      alert('Please enter your Google Gemini API key.');
       return;
     }
     setIsGeneratingAi(true);
     localStorage.setItem('ps_user_ai_key', userApiKey.trim());
+
+    let promptText = "";
+    if (aiContentType === 'chapter') {
+      promptText = `You are a professional literary typesetter and author. Write the full opening of Chapter 1 for a book titled "${bookTitle}" by "${authorName}". Style: Rich, atmospheric, engaging narrative prose suitable for trade print publication. Include 3 well-developed paragraphs. ${aiCustomPrompt ? `Additional instructions: ${aiCustomPrompt}` : ''}`;
+    } else if (aiContentType === 'outline') {
+      promptText = `Create a comprehensive 10-chapter book outline for a publication titled "${bookTitle}" by "${authorName}". Provide chapter titles and a 2-sentence summary of each chapter's core progression. ${aiCustomPrompt ? `Additional instructions: ${aiCustomPrompt}` : ''}`;
+    } else if (aiContentType === 'planner') {
+      promptText = `You are designing an interior low-content structured guided planner for a book titled "${bookTitle}". Generate a structured daily template containing: 1) Date & Goal Focus, 2) Priority Task Checklist, 3) Habit Tracking Matrix, 4) Reflection & Wins section. Output in clean formatted text. ${aiCustomPrompt ? `Additional instructions: ${aiCustomPrompt}` : ''}`;
+    } else {
+      promptText = `Generate 30 unique, insightful daily journaling prompts and habit milestones for a self-improvement low-content journal titled "${bookTitle}". Output numbered 1 to 30. ${aiCustomPrompt ? `Additional instructions: ${aiCustomPrompt}` : ''}`;
+    }
 
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${userApiKey.trim()}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: bookCategory === 'low_content'
-                ? `Generate a structured 10-prompt self-development planner table and habit log in plain text for a book titled "${bookTitle}". Focus on practical daily check-ins.`
-                : `Write a clean, descriptive opening narrative paragraph for Chapter 1 of a book titled "${bookTitle}" by author "${authorName}". Style: Professional trade fiction/non-fiction.`
-            }]
-          }]
+          contents: [{ parts: [{ text: promptText }] }]
         })
       });
 
@@ -290,13 +304,15 @@ export default function PublishStudioApp() {
       const generated = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (generated) {
-        setManuscriptParagraphs(prev => [generated, ...prev]);
+        const newParas = generated.split('\n\n').filter(p => p.trim().length > 0);
+        setManuscriptParagraphs(newParas);
         setAiModalOpen(false);
+        setCurrentStep(2);
       } else {
-        alert('Generation complete. Please check the response format or your API key.');
+        alert('Could not generate text. Check API Key validity and network connection.');
       }
     } catch (err) {
-      alert('Error connecting to AI API: ' + err.message);
+      alert('AI Generation error: ' + err.message);
     } finally {
       setIsGeneratingAi(false);
     }
@@ -351,7 +367,6 @@ export default function PublishStudioApp() {
     renderCard(backCoverImage, backX, bleedPx, trimWidthPx, trimHeightPx, 'BACK COVER');
     renderCard(frontCoverImage, frontX, bleedPx, trimWidthPx, trimHeightPx, bookTitle);
 
-    // Spine
     ctx.fillStyle = '#EAE3D6';
     ctx.fillRect(spineX, bleedPx, spineWidthPx, trimHeightPx);
     if (pageExtent >= 80) {
@@ -363,8 +378,8 @@ export default function PublishStudioApp() {
       ctx.textAlign = 'center';
       ctx.fillText(`${bookTitle}  •  ${authorName}`, 0, 8);
       ctx.restore();
-         }
-        // Barcode Zone
+    }
+
     const barcodeWPx = Math.round(2.0 * 300);
     const barcodeHPx = Math.round(1.2 * 300);
     const barcodeX = spineX - barcodeWPx - Math.round(0.3 * 300);
@@ -396,7 +411,6 @@ export default function PublishStudioApp() {
       });
     });
   };
-
   const handleDownloadDOCX = () => {
     const formattedContent = 
       `TITLE: ${bookTitle}\nAUTHOR: ${authorName}\nTRIM: ${trimSize}\nGUTTER: ${calculatedGutter}"\n\n` +
@@ -412,7 +426,8 @@ export default function PublishStudioApp() {
       fileLabel: 'Formatted Manuscript (.docx)'
     });
   };
-    const handleDownloadSpecification = () => {
+
+  const handleDownloadSpecification = () => {
     const spec = 
 `============================================================
 PUBLISHSTUDIO - PRODUCTION SPECIFICATION & ANNUAL REPORT
@@ -427,7 +442,7 @@ Paper Stock Caliper:  ${PAPER_SPECS[paperType]?.label}
 Binding Gutter:       ${calculatedGutter}"
 Spine Width:          ${spineWidth}"
 Full Cover Canvas:    ${coverPixelsWidth} x ${coverPixelsHeight} px (300 DPI)
-Initial Monthly Units: ${initialMonthlySales}
+Starting Month 1 Units: ${initialMonthlySales}
 Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${monthlyGrowthRate}%`}
 ============================================================`;
 
@@ -458,8 +473,8 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
   return (
     <div className={`min-h-screen transition-colors duration-200 ${isDarkMode ? 'dark-canvas' : 'bg-[#F5EFE3] text-[#1C2010]'}`}>
       
-      {/* ====================================================================
-          SECTION 4.0: HEADER DOCK (DIRECT ACCESS, NO LOGIN WALL)
+{/* ====================================================================
+          SECTION 4.0: HEADER DOCK (PERMANENT DARK TEXT IN LIGHT MODE)
           ==================================================================== */}
       <header className={`sticky top-0 z-40 w-full backdrop-blur-md border-b transition-colors ${
         isDarkMode ? 'bg-[#12140D]/90 border-white/5' : 'bg-[#F5EFE3]/95 border-[#D8C9A8]'
@@ -519,12 +534,12 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
             {/* AI Generator Modal Launcher */}
             <button
               onClick={() => setAiModalOpen(true)}
-              className={`p-2 sm:px-3 sm:py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 ${
+              className={`p-2 sm:px-3 sm:py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 ${
                 isDarkMode ? 'dark-soft-raised text-amber-400' : 'soft-btn-pill text-[#4F5B2A]'
               }`}
               title="AI Generator (BYOK)"
             >
-              <Cpu className="w-3.5 h-3.5" />
+              <Cpu className="w-4 h-4 text-[#4F5B2A]" />
               <span className="hidden sm:inline">AI Studio</span>
             </button>
 
@@ -554,21 +569,20 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
           </div>
         </div>
       </header>
-       
+
       {/* ====================================================================
           SECTION 5.0: FULL-PAGE HELP MANUAL
           ==================================================================== */}
       {activeView === 'help' && (
         <HelpCenter onBackToStudio={() => setActiveView('studio')} isDarkMode={isDarkMode} />
       )}
-
-      {/* ====================================================================
+             {/* ====================================================================
           SECTION 6.0: 4-STEP WORKSPACE
           ==================================================================== */}
       {activeView === 'studio' && (
         <main className="max-w-5xl mx-auto px-4 py-8 pb-32 animate-in fade-in">
           
-          {/* Working Stepper Navigation */}
+          {/* STEPPER NAVIGATION WITH DIRECT CLICK TRANSITIONS */}
           <div className="mb-8">
             <div className={`p-2.5 rounded-full ${isDarkMode ? 'dark-soft-inset' : 'soft-inset'}`}>
               <div className="flex items-center justify-between">
@@ -587,9 +601,9 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                         onClick={() => setCurrentStep(s.step)}
                         className={`flex items-center gap-2 px-3 sm:px-5 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer ${
                           isActive
-                            ? 'bg-[#4F5B2A] text-white shadow-md'
+                            ? 'bg-[#4F5B2A] text-white shadow-md font-bold'
                             : isPassed
-                              ? 'text-[#4F5B2A] dark:text-emerald-400'
+                              ? 'text-[#4F5B2A] font-bold'
                               : 'text-[#4F5B2A]/60 dark:text-zinc-400'
                         }`}
                       >
@@ -624,7 +638,7 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                   </span>
                 </div>
                 <p className="text-xs text-[#4F5B2A] dark:text-[#9A96A0] mt-1">
-                  Define your book archetype, dimensions, and author profile
+                  Define book archetype, dimensions, and author profile (Default: <strong>{authorName}</strong>)
                 </p>
               </div>
 
@@ -658,8 +672,7 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                   );
                 })}
               </div>
-
-              {/* Calibrations Card */}
+                         {/* Calibrations Card */}
               <div className={`p-6 sm:p-7 rounded-3xl ${isDarkMode ? 'dark-soft-raised' : 'soft-raised'}`}>
                 <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-[#4F5B2A] dark:text-zinc-400 block mb-3">
                   MANUFACTURING CALIBRATIONS CARD
@@ -728,8 +741,7 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
               </div>
             </div>
           )}
-           
-          {/* STEP 2: INTERIOR PROOF SPREAD & TEXT EDITOR */}
+                     {/* STEP 2: INTERIOR PROOF SPREAD & TEXT EDITOR */}
           {currentStep === 2 && (
             <div className="space-y-6">
               <div>
@@ -737,15 +749,24 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                   Step 2: Interior Production & Structuring
                 </h2>
                 <p className="text-xs text-[#4F5B2A] dark:text-[#9A96A0] mt-1">
-                  Author profile: <strong>{authorName}</strong>. Typeset standard running heads and verify proof layout.
+                  Author profile: <strong>{authorName}</strong>. Typeset running heads, chapter headings, and verify proof layout.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className={`p-6 rounded-3xl ${isDarkMode ? 'dark-soft-raised' : 'soft-raised'} space-y-4`}>
-                  <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-[#4F5B2A] dark:text-zinc-400 block">
-                    MANUSCRIPT INPUTS CARD
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-[#4F5B2A] dark:text-zinc-400 block">
+                      MANUSCRIPT INPUTS CARD
+                    </span>
+                    <button
+                      onClick={() => setAiModalOpen(true)}
+                      className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#4F5B2A] text-white flex items-center gap-1 shadow-sm"
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      <span>AI Generate</span>
+                    </button>
+                  </div>
 
                   <div>
                     <label className="text-[11px] font-bold uppercase tracking-wider block mb-1 text-[#1C2010] dark:text-zinc-200">
@@ -828,8 +849,7 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                   </p>
                 </div>
               </div>
-
-              {quickFixDrawerOpen && (
+                             {quickFixDrawerOpen && (
                 <div className={`p-5 rounded-3xl ${isDarkMode ? 'dark-soft-inset' : 'soft-inset'} space-y-3`}>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-[#4F5B2A]">Paragraph Editor</h4>
                   {manuscriptParagraphs.map((para, idx) => (
@@ -849,7 +869,8 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
               )}
             </div>
           )}
-                     {/* STEP 3: COVER BLUEPRINT & ASSET COMPILER */}
+
+          {/* STEP 3: COVER BLUEPRINT & ASSET COMPILER */}
           {currentStep === 3 && (
             <div className="space-y-6">
               <div>
@@ -932,8 +953,7 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                         )}
                       </div>
                     </div>
-
-                    {/* Spine */}
+                                         {/* Spine */}
                     <div className="w-8 sm:w-12 h-full flex items-center justify-center bg-black/5 dark:bg-white/5 border-r border-dashed border-black/20">
                       <span className="text-[9px] font-mono -rotate-90 whitespace-nowrap text-[#4F5B2A] dark:text-zinc-400 font-bold">
                         {pageExtent >= 80 ? bookTitle.slice(0, 14) : ''}
@@ -966,10 +986,7 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 </p>
               </div>
             </div>
-          )}
-
-           
-          {/* STEP 4: PREFLIGHT, DUAL-FORMAT & 12-MONTH TRAJECTORY REPORT */}
+          )}{/* STEP 4: PREFLIGHT, DUAL-FORMAT & TRANSPARENT 12-MONTH TRAJECTORY REPORT */}
           {currentStep === 4 && (
             <div className="space-y-6">
               <div>
@@ -999,33 +1016,38 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
-                    <div className="p-3 rounded-xl bg-white dark:bg-[#18161D] shadow-xs">
-                      <span className="text-[10px] text-[#4F5B2A] block font-semibold">🥉 Conservative Annual</span>
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-[#18161D] shadow-xs">
+                      <span className="text-[10px] text-[#4F5B2A] block font-semibold">🥉 Conservative (Low Velocity)</span>
                       <span className="text-base font-bold font-mono text-[#1C2010] dark:text-white mt-1 block">
                         ${annualReportData.conservative.annualUsd.toLocaleString()} / ₹{annualReportData.conservative.annualInr.toLocaleString()}
                       </span>
-                      <span className="text-[10px] text-[#4F5B2A] block mt-0.5">{annualReportData.conservative.annualUnits} units / year</span>
+                      <span className="text-[10px] text-[#4F5B2A] block mt-1 font-mono">
+                        {annualReportData.conservative.annualUnits} total copies
+                      </span>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-white dark:bg-[#18161D] shadow-xs">
-                      <span className="text-[10px] text-[#4F5B2A] block font-semibold">🥈 Benchmark Annual</span>
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-[#18161D] shadow-xs">
+                      <span className="text-[10px] text-[#4F5B2A] block font-semibold">🥈 Benchmark (Target Velocity)</span>
                       <span className="text-base font-bold font-mono text-[#4F5B2A] dark:text-zinc-300 mt-1 block">
                         ${annualReportData.average.annualUsd.toLocaleString()} / ₹{annualReportData.average.annualInr.toLocaleString()}
                       </span>
-                      <span className="text-[10px] text-[#4F5B2A] block mt-0.5">{annualReportData.average.annualUnits} units / year</span>
+                      <span className="text-[10px] text-[#4F5B2A] block mt-1 font-mono">
+                        {annualReportData.average.annualUnits} total copies
+                      </span>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-white dark:bg-[#18161D] shadow-xs">
-                      <span className="text-[10px] text-[#4F5B2A] block font-semibold">🥇 Scaled Annual</span>
+                    <div className="p-3.5 rounded-xl bg-white dark:bg-[#18161D] shadow-xs">
+                      <span className="text-[10px] text-[#4F5B2A] block font-semibold">🥇 Scaled (Ad Scaling)</span>
                       <span className="text-base font-bold font-mono text-[#B8892D] mt-1 block">
                         ${annualReportData.scaled.annualUsd.toLocaleString()} / ₹{annualReportData.scaled.annualInr.toLocaleString()}
                       </span>
-                      <span className="text-[10px] text-[#4F5B2A] block mt-0.5">{annualReportData.scaled.annualUnits} units / year</span>
+                      <span className="text-[10px] text-[#4F5B2A] block mt-1 font-mono">
+                        {annualReportData.scaled.annualUnits} total copies
+                      </span>
                     </div>
                   </div>
                 </div>
-
-                {/* PUBLISHING FORMAT SELECTION (EBOOK / PAPERBACK / BOTH) */}
+                               {/* PUBLISHING FORMAT SELECTION (EBOOK / PAPERBACK / BOTH) */}
                 <div className={`p-4 rounded-2xl ${isDarkMode ? 'dark-soft-inset' : 'soft-inset'} mb-6`}>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
@@ -1059,25 +1081,26 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                     </div>
                   </div>
                 </div>
-                               {/* MONTH-OVER-MONTH GROWTH/DECAY CONTROLLER */}
+
+                {/* EXPLICIT TRAJECTORY SLIDER & MONTH-BY-MONTH BREAKDOWN */}
                 <div className={`p-4 rounded-2xl ${isDarkMode ? 'dark-soft-inset' : 'soft-inset'} mb-6 space-y-4`}>
                   <div className="flex justify-between items-center">
                     <div>
                       <span className="text-xs font-bold uppercase tracking-wider text-[#1C2010] dark:text-white block">
-                        INITIAL MONTHLY SALES VELOCITY & MOM TRAJECTORY
+                        MONTHLY TRAJECTORY CONTROLS
                       </span>
                       <p className="text-[11px] text-[#4F5B2A]">
-                        Simulate compound monthly momentum (+%) or backlist taper (-%).
+                        Simulate compound monthly momentum (+% scaling) or natural backlist taper (-% decay).
                       </p>
                     </div>
                     <span className="text-xs font-mono font-bold text-[#4F5B2A] dark:text-zinc-300">
-                      Start: {initialMonthlySales} units/mo | Trajectory: {monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${monthlyGrowthRate}%`}/mo
+                      Month 1: {initialMonthlySales} units | Trajectory: {monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${monthlyGrowthRate}%`}/mo
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] text-[#4F5B2A] block mb-1">Starting Month 1 Sales Volume:</label>
+                      <label className="text-[10px] text-[#4F5B2A] block mb-1 font-bold">Month 1 Starting Copies Sold:</label>
                       <input
                         type="range"
                         min={5}
@@ -1090,7 +1113,9 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                     </div>
 
                     <div>
-                      <label className="text-[10px] text-[#4F5B2A] block mb-1">Monthly Growth / Decay Rate (-10% to +25%):</label>
+                      <label className="text-[10px] text-[#4F5B2A] block mb-1 font-bold">
+                        Monthly Trajectory Rate: {monthlyGrowthRate > 0 ? `Scaling (+${monthlyGrowthRate}% / month)` : (monthlyGrowthRate === 0 ? 'Flat (0% / month)' : `Decaying (${monthlyGrowthRate}% / month)`)}
+                      </label>
                       <input
                         type="range"
                         min={-10}
@@ -1100,6 +1125,22 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                         onChange={(e) => setMonthlyGrowthRate(parseInt(e.target.value))}
                         className="w-full accent-[#4F5B2A]"
                       />
+                    </div>
+                  </div>
+                   
+                  {/* Explicit Progression Cards (Month 1 -> Month 6 -> Month 12) */}
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-black/10 text-center">
+                    <div className="p-2 rounded-xl bg-black/5 dark:bg-white/5">
+                      <span className="text-[9px] uppercase font-bold text-[#4F5B2A] block">Month 1 (Launch)</span>
+                      <span className="text-xs font-mono font-bold">{annualReportData.average.m1Units} copies/mo</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-black/5 dark:bg-white/5">
+                      <span className="text-[9px] uppercase font-bold text-[#4F5B2A] block">Month 6 (Mid-Year)</span>
+                      <span className="text-xs font-mono font-bold">{annualReportData.average.m6Units} copies/mo</span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-black/5 dark:bg-white/5">
+                      <span className="text-[9px] uppercase font-bold text-[#4F5B2A] block">Month 12 (Year-End)</span>
+                      <span className="text-xs font-mono font-bold">{annualReportData.average.m12Units} copies/mo</span>
                     </div>
                   </div>
                 </div>
@@ -1190,8 +1231,7 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                     })}
                   </div>
                 </div>
-
-                {/* Territory Cards */}
+                               {/* Territory Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {activeSelectedTerritories.map((item) => (
                     <div key={item.code} className={`p-4 rounded-2xl ${isDarkMode ? 'dark-soft-inset' : 'soft-inset'} space-y-2 text-xs`}>
@@ -1218,7 +1258,8 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                     </div>
                   ))}
                 </div>
-                       <p className="text-[10px] text-[#4F5B2A] italic text-center mt-5">
+
+                <p className="text-[10px] text-[#4F5B2A] italic text-center mt-5">
                   * Disclaimer: Figures are mathematical estimates based on selected trajectory formulas; this does not constitute a guaranteed income projection.
                 </p>
               </div>
@@ -1254,7 +1295,7 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
             </div>
           )}
 
-          {/* STICKY BOTTOM DOCK */}
+          {/* STICKY BOTTOM DOCK (NOW DIRECTLY FUNCTIONAL) */}
           <div className="fixed bottom-0 left-0 right-0 z-30 p-3 bg-white/90 dark:bg-[#12140D]/90 backdrop-blur-md flex items-center justify-between max-w-5xl mx-auto border-t border-black/5 dark:border-white/5">
             <button onClick={() => setActiveView('home')} className="px-4 py-2 rounded-full text-xs font-semibold soft-btn-pill cursor-pointer">
               Home Overview
@@ -1271,8 +1312,7 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                   <span>Back</span>
                 </button>
               )}
-
-              {currentStep < 4 ? (
+                   {currentStep < 4 ? (
                 <button
                   type="button"
                   onClick={() => setCurrentStep((prev) => Math.min(4, prev + 1))}
@@ -1306,20 +1346,20 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
           SECTION 7.0: MODAL OVERLAYS (AI BYOK, SHELF, SUCCESS)
           ==================================================================== */}
       
-      {/* SECTION 7.1: BYOK CLIENT-SIDE AI GENERATOR MODAL */}
+      {/* SECTION 7.1: FULL AI STUDIO CONTENT DRAFTER */}
       {aiModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className={`w-full max-w-lg rounded-3xl p-6 ${isDarkMode ? 'dark-soft-raised' : 'soft-raised'}`}>
             <div className="flex items-center justify-between pb-3 border-b border-black/5 dark:border-white/5 mb-4">
               <div className="flex items-center gap-2">
                 <Cpu className="w-5 h-5 text-[#4F5B2A]" />
-                <h3 className="font-editorial font-bold text-base">Client-Side AI Generator (Bring Your Own Key)</h3>
+                <h3 className="font-editorial font-bold text-base">Client-Side AI Book & Content Generator</h3>
               </div>
               <button onClick={() => setAiModalOpen(false)}><X className="w-4 h-4" /></button>
             </div>
 
             <p className="text-xs text-[#4F5B2A] dark:text-[#9A96A0] mb-4">
-              Enter your own Gemini API Key. Calls execute directly from your browser with ₹0 server intermediaries.
+              Use your own Google Gemini API key to draft full chapters, book outlines, or low-content planners directly into your manuscript. Runs with zero server fees.
             </p>
 
             <div className="space-y-3 mb-4">
@@ -1335,10 +1375,37 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
               </div>
 
               <div>
-                <label className="text-[11px] font-bold uppercase block mb-1">Target Production Engine:</label>
-                <div className="p-2.5 rounded-xl border text-xs bg-black/5 dark:bg-white/5">
-                  Currently active: <strong>{bookCategory === 'low_content' ? 'Engine B (Low-Content Planners & Logs)' : 'Engine A (Text-Rich Chapters)'}</strong>
+                <label className="text-[11px] font-bold uppercase block mb-1">Content Generation Intent:</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'chapter', label: '📖 Full Chapter 1 Opener' },
+                    { id: 'outline', label: '📑 10-Chapter Book Outline' },
+                    { id: 'planner', label: '📅 Daily Planner Table (Low-Content)' },
+                    { id: 'habits', label: '✨ 30 Journal Prompts (Low-Content)' }
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setAiContentType(item.id)}
+                      className={`p-2 rounded-xl text-xs font-semibold border text-left transition ${
+                        aiContentType === item.id ? 'border-[#4F5B2A] bg-[#4F5B2A]/10 text-[#4F5B2A]' : 'border-black/10'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
                 </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold uppercase block mb-1">Optional Topic / Style Directions:</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Tone, genre, specific themes or character details..."
+                  value={aiCustomPrompt}
+                  onChange={(e) => setAiCustomPrompt(e.target.value)}
+                  className="w-full p-2.5 rounded-xl text-xs border bg-white dark:bg-[#18161D] outline-none"
+                />
               </div>
             </div>
 
@@ -1352,14 +1419,13 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 className="soft-btn-primary px-5 py-2 rounded-full text-xs font-bold flex items-center gap-1.5"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>{isGeneratingAi ? 'Generating Content...' : 'Generate Content'}</span>
+                <span>{isGeneratingAi ? 'Writing Book Content...' : 'Generate & Insert into Book'}</span>
               </button>
             </div>
           </div>
         </div>
       )}
-       
-           {/* SECTION 7.2: SHELF MODAL */}
+       {/* SECTION 7.2: SHELF MODAL */}
       {isShelfOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className={`w-full max-w-lg rounded-3xl p-6 ${isDarkMode ? 'dark-soft-raised' : 'soft-raised'}`}>
@@ -1455,4 +1521,4 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
     </div>
   );
 }
-     
+               

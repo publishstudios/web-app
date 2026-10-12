@@ -11,7 +11,7 @@ import {
   Book, BookOpen, HelpCircle, Sun, Moon, Sparkles, Download, 
   ArrowRight, ArrowLeft, CheckCircle2, 
   Eye, Sliders, Layers, FolderOpen, Trash2, X, Globe, Upload, CheckSquare, Square,
-  Cpu, Calendar, FileText, Check
+  Cpu, Calendar, FileText, Check, ShieldCheck
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import HelpCenter from './HelpCenter';
@@ -70,6 +70,7 @@ const SAMPLE_CHAPTER_TEXT = [
   "He dipped the nib of his pen into the dark ink, pausing to listen to the carriage wheels rolling across the wet cobblestones below. Every manuscript began this way—not with certainty, but with the quiet discipline of facing an empty sheet.",
   "The margins preserved the words, keeping the inner voice protected from the binding. A properly formatted book respects both the eyes of the reader and the physical machinery of the bindery."
 ];
+
 /* --------------------------------------------------------------------------
    SECTION 3.0: MAIN COMPONENT
    -------------------------------------------------------------------------- */
@@ -133,7 +134,8 @@ export default function PublishStudioApp() {
   const [hoverRating, setHoverRating] = useState(0);
   const [reviewFeedback, setReviewFeedback] = useState('');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
-       const refreshProjectsList = async () => {
+
+  const refreshProjectsList = async () => {
     try {
       const list = await getAllProjectsFromStorage();
       setSavedProjects(list);
@@ -235,7 +237,6 @@ export default function PublishStudioApp() {
     return territoryCalculations.filter(t => selectedKdpCountries.includes(t.code));
   }, [territoryCalculations, selectedKdpCountries]);
 
-  // Transparent Trajectory Engine with Month 1, Month 6, and Month 12 data
   const annualReportData = useMemo(() => {
     const totalUsdRoyaltyPerUnit = activeSelectedTerritories.reduce((acc, curr) => acc + curr.usdEquivalentRoyalty, 0);
 
@@ -271,6 +272,7 @@ export default function PublishStudioApp() {
       scaled: calculateTrajectory(Math.round(initialMonthlySales * 5))
     };
   }, [activeSelectedTerritories, initialMonthlySales, monthlyGrowthRate]);
+
   /* SECTION 3.10: FULL AI ENGINE (BOOK DRAFTER & LOW-CONTENT BUILDER) */
   const handleGenerateAiContent = async () => {
     if (!userApiKey.trim()) {
@@ -411,6 +413,7 @@ export default function PublishStudioApp() {
       });
     });
   };
+
   const handleDownloadDOCX = () => {
     const formattedContent = 
       `TITLE: ${bookTitle}\nAUTHOR: ${authorName}\nTRIM: ${trimSize}\nGUTTER: ${calculatedGutter}"\n\n` +
@@ -473,7 +476,7 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
   return (
     <div className={`min-h-screen transition-colors duration-200 ${isDarkMode ? 'dark-canvas' : 'bg-[#F5EFE3] text-[#1C2010]'}`}>
       
-{/* ====================================================================
+      {/* ====================================================================
           SECTION 4.0: HEADER DOCK (PERMANENT DARK TEXT IN LIGHT MODE)
           ==================================================================== */}
       <header className={`sticky top-0 z-40 w-full backdrop-blur-md border-b transition-colors ${
@@ -571,12 +574,71 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
       </header>
 
       {/* ====================================================================
-          SECTION 5.0: FULL-PAGE HELP MANUAL
+          SECTION 5.0: FULL-PAGE HELP MANUAL OR HOME OVERVIEW
           ==================================================================== */}
       {activeView === 'help' && (
         <HelpCenter onBackToStudio={() => setActiveView('studio')} isDarkMode={isDarkMode} />
       )}
-             {/* ====================================================================
+
+      {activeView === 'home' && (
+        <main className="max-w-5xl mx-auto px-4 py-12 animate-in fade-in space-y-10">
+          <div className="text-center space-y-3">
+            <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-[#4F5B2A] dark:text-zinc-400 block">
+              PUBLISHSTUDIO OPERATING SYSTEM
+            </span>
+            <h1 className="font-editorial text-4xl sm:text-5xl font-bold tracking-tight text-[#1C2010] dark:text-white">
+              Professional Book OS & Typesetting Engine
+            </h1>
+            <p className="text-sm sm:text-base text-[#7A7368] dark:text-[#9A96A0] max-w-2xl mx-auto leading-relaxed">
+              Compile print-ready interior layouts, generate 300 DPI full-wrap covers with barcode exclusion zones, and simulate 15-territory POD royalties locally in your browser.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className={`p-6 rounded-3xl ${isDarkMode ? 'dark-soft-raised' : 'soft-raised'} space-y-3`}>
+              <Sliders className="w-8 h-8 text-[#4F5B2A]" />
+              <h3 className="font-editorial font-bold text-lg text-[#1C2010] dark:text-white">1. Precision Geometry</h3>
+              <p className="text-xs text-[#7A7368] dark:text-[#9A96A0] leading-relaxed">
+                Automated spine calculations based on paper caliper, mirrored gutter margins, and running header verification.
+              </p>
+            </div>
+
+            <div className={`p-6 rounded-3xl ${isDarkMode ? 'dark-soft-raised' : 'soft-raised'} space-y-3`}>
+              <Layers className="w-8 h-8 text-[#4F5B2A]" />
+              <h3 className="font-editorial font-bold text-lg text-[#1C2010] dark:text-white">2. 300 DPI Cover Compiler</h3>
+              <p className="text-xs text-[#7A7368] dark:text-[#9A96A0] leading-relaxed">
+                Full-wrap jacket builder with a locked 2.0" × 1.2" barcode exclusion zone to prevent retail scan overlap.
+              </p>
+            </div>
+
+            <div className={`p-6 rounded-3xl ${isDarkMode ? 'dark-soft-raised' : 'soft-raised'} space-y-3`}>
+              <ShieldCheck className="w-8 h-8 text-[#4F5B2A]" />
+              <h3 className="font-editorial font-bold text-lg text-[#1C2010] dark:text-white">3. 15-Territory Royalties</h3>
+              <p className="text-xs text-[#7A7368] dark:text-[#9A96A0] leading-relaxed">
+                Dynamic currency conversion across Amazon global marketplaces with a 12-month compound growth trajectory engine.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-4 pt-4">
+            <button
+              onClick={() => setActiveView('studio')}
+              className="px-6 py-3 rounded-full soft-btn-primary text-xs font-bold flex items-center gap-2 shadow-lg cursor-pointer"
+            >
+              <span>Launch Guided Workflow</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setActiveView('help')}
+              className={`px-6 py-3 rounded-full text-xs font-semibold cursor-pointer ${isDarkMode ? 'dark-soft-raised' : 'soft-btn-pill'}`}
+            >
+              Read Publishing Manual
+            </button>
+          </div>
+        </main>
+      )}
+
+      {/* ====================================================================
           SECTION 6.0: 4-STEP WORKSPACE
           ==================================================================== */}
       {activeView === 'studio' && (
@@ -672,7 +734,8 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                   );
                 })}
               </div>
-                         {/* Calibrations Card */}
+
+              {/* Calibrations Card */}
               <div className={`p-6 sm:p-7 rounded-3xl ${isDarkMode ? 'dark-soft-raised' : 'soft-raised'}`}>
                 <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-[#4F5B2A] dark:text-zinc-400 block mb-3">
                   MANUFACTURING CALIBRATIONS CARD
@@ -741,7 +804,8 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
               </div>
             </div>
           )}
-                     {/* STEP 2: INTERIOR PROOF SPREAD & TEXT EDITOR */}
+
+          {/* STEP 2: INTERIOR PROOF SPREAD & TEXT EDITOR */}
           {currentStep === 2 && (
             <div className="space-y-6">
               <div>
@@ -849,7 +913,8 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                   </p>
                 </div>
               </div>
-                             {quickFixDrawerOpen && (
+
+              {quickFixDrawerOpen && (
                 <div className={`p-5 rounded-3xl ${isDarkMode ? 'dark-soft-inset' : 'soft-inset'} space-y-3`}>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-[#4F5B2A]">Paragraph Editor</h4>
                   {manuscriptParagraphs.map((para, idx) => (
@@ -953,7 +1018,8 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                         )}
                       </div>
                     </div>
-                                         {/* Spine */}
+
+                    {/* Spine */}
                     <div className="w-8 sm:w-12 h-full flex items-center justify-center bg-black/5 dark:bg-white/5 border-r border-dashed border-black/20">
                       <span className="text-[9px] font-mono -rotate-90 whitespace-nowrap text-[#4F5B2A] dark:text-zinc-400 font-bold">
                         {pageExtent >= 80 ? bookTitle.slice(0, 14) : ''}
@@ -986,7 +1052,9 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 </p>
               </div>
             </div>
-          )}{/* STEP 4: PREFLIGHT, DUAL-FORMAT & TRANSPARENT 12-MONTH TRAJECTORY REPORT */}
+          )}
+
+          {/* STEP 4: PREFLIGHT, DUAL-FORMAT & TRANSPARENT 12-MONTH TRAJECTORY REPORT */}
           {currentStep === 4 && (
             <div className="space-y-6">
               <div>
@@ -1047,7 +1115,8 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                     </div>
                   </div>
                 </div>
-                               {/* PUBLISHING FORMAT SELECTION (EBOOK / PAPERBACK / BOTH) */}
+
+                {/* PUBLISHING FORMAT SELECTION (EBOOK / PAPERBACK / BOTH) */}
                 <div className={`p-4 rounded-2xl ${isDarkMode ? 'dark-soft-inset' : 'soft-inset'} mb-6`}>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
@@ -1231,7 +1300,8 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                     })}
                   </div>
                 </div>
-                               {/* Territory Cards */}
+
+                {/* Territory Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {activeSelectedTerritories.map((item) => (
                     <div key={item.code} className={`p-4 rounded-2xl ${isDarkMode ? 'dark-soft-inset' : 'soft-inset'} space-y-2 text-xs`}>
@@ -1312,7 +1382,8 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                   <span>Back</span>
                 </button>
               )}
-                   {currentStep < 4 ? (
+
+              {currentStep < 4 ? (
                 <button
                   type="button"
                   onClick={() => setCurrentStep((prev) => Math.min(4, prev + 1))}
@@ -1425,7 +1496,8 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
           </div>
         </div>
       )}
-       {/* SECTION 7.2: SHELF MODAL */}
+
+      {/* SECTION 7.2: SHELF MODAL */}
       {isShelfOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className={`w-full max-w-lg rounded-3xl p-6 ${isDarkMode ? 'dark-soft-raised' : 'soft-raised'}`}>
@@ -1521,4 +1593,3 @@ Monthly Trajectory:   ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
     </div>
   );
 }
-               

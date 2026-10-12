@@ -83,6 +83,7 @@ const KNOWLEDGE_ARTICLES = [
     ]
   }
 ];
+
 /* --------------------------------------------------------------------------
    SECTION 3.0: MAIN HELPCENTER COMPONENT
    -------------------------------------------------------------------------- */
@@ -222,4 +223,4 @@ export default function HelpCenter({ onBackToStudio, isDarkMode }) {
       </div>
     </div>
   );
-                }
+}

@@ -11,11 +11,8 @@
 :root {
   --bg-porcelain: #F5EFE3;
   --text-primary: #1C2010;
-  --text-muted: #4F5B2A;
-  --card-raised: #EFE8D8;
-  --card-inset: #E5DCC9;
-  --accent-gold: #B8892D;
   --brand-olive: #4F5B2A;
+  --accent-gold: #B8892D;
 }
 
 html, body {
@@ -31,17 +28,11 @@ html, body {
   font-family: 'Playfair Display', Georgia, serif;
 }
 
-/* Hard-contrast headings & labels */
-h1, h2, h3, h4, h5, h6, strong, b {
+/* Enforce dark text across all header elements in light mode */
+header, header span, header p, header button {
   color: #1C2010 !important;
 }
 
-label, .field-label {
-  color: #363E1C !important;
-  font-weight: 700;
-}
-
-/* Tactile Soft-UI Tokens (Palette 1) */
 .soft-raised {
   background: #FAF6ED !important;
   color: #1C2010 !important;
@@ -76,17 +67,13 @@ label, .field-label {
   border: 1px solid rgba(255, 255, 255, 0.8) !important;
 }
 
-.accent-gold-text {
-  color: #B8892D !important;
-}
-
 /* Dark Theme Overrides */
 .dark-canvas {
   background-color: #12140D !important;
   color: #EDECE6 !important;
 }
-.dark-canvas h1, .dark-canvas h2, .dark-canvas h3, .dark-canvas h4 {
-  color: #FFFFFF !important;
+.dark-canvas header, .dark-canvas header span, .dark-canvas header p {
+  color: #EDECE6 !important;
 }
 .dark-soft-raised {
   background: #1A1D13 !important;

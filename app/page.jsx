@@ -164,7 +164,8 @@ export default function PublishStudioApp() {
       setUsEbookPrice(val);
     }
   };
-   const territoryCalculations = useMemo(() => {
+
+  const territoryCalculations = useMemo(() => {
     const pbUs = parseFloat(usPaperbackPrice) || 12.99;
     const ebUs = parseFloat(usEbookPrice) || 4.99;
 
@@ -275,7 +276,8 @@ export default function PublishStudioApp() {
       setIsGeneratingAi(false);
     }
   };
-     /* COVER & SPEC EXPORTS */
+
+  /* COVER & SPEC EXPORTS */
   const handleExportFullCoverArtwork = () => {
     const canvas = document.createElement('canvas');
     canvas.width = coverPixelsWidth;
@@ -312,7 +314,6 @@ export default function PublishStudioApp() {
     renderCard(backCoverImage, backX, bleedPx, trimWidthPx, trimHeightPx, 'BACK COVER');
     renderCard(frontCoverImage, frontX, bleedPx, trimWidthPx, trimHeightPx, bookTitle);
 
-    // Spine
     ctx.fillStyle = '#E8DFC8';
     ctx.fillRect(spineX, bleedPx, spineWidthPx, trimHeightPx);
     if (pageExtent >= 80) {
@@ -363,11 +364,18 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
             </div>
             <div>
               <span className="font-editorial font-bold text-base text-[#1C2010]">PUBLISHSTUDIO</span>
-              <p className="text-[10px] text-[#4F5B2A] font-semibold">Universal Print-on-Demand (POD)</p>
+              <p className="text-[10px] text-[#4F5B2A] font-semibold">Self Publishing Supporting Software</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActiveView('home')}
+              className="px-3 py-1.5 rounded-full text-xs font-bold soft-btn-pill text-[#4F5B2A] cursor-pointer"
+            >
+              Home
+            </button>
+
             <button
               onClick={() => setAiModalOpen(true)}
               className="px-3 py-1.5 rounded-full text-xs font-bold soft-btn-pill text-[#4F5B2A] flex items-center gap-1.5 cursor-pointer"
@@ -401,50 +409,104 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
           </div>
         </div>
       </header>
-             {/* VIEW A: LANDING / HOME OVERVIEW */}
+
+      {/* VIEW A: LANDING / HOME OVERVIEW */}
       {activeView === 'home' && (
-        <main className="max-w-4xl mx-auto px-4 py-12 space-y-8 animate-in fade-in">
-          <div className="text-center space-y-3">
-            <span className="text-[11px] font-mono uppercase tracking-widest font-bold text-[#4F5B2A] bg-[#E8DFC8] px-3 py-1 rounded-full">
-              UNIVERSAL PRINT-ON-DEMAND (POD)
+        <main className="max-w-6xl mx-auto px-4 py-12 space-y-16 animate-in fade-in">
+          
+          {/* HERO SECTION */}
+          <div className="text-center space-y-4 max-w-3xl mx-auto">
+            <span className="text-[11px] font-mono uppercase tracking-widest font-bold text-[#4F5B2A] bg-[#E8DFC8] px-3.5 py-1.5 rounded-full">
+              Self Publishing Supporting Software
             </span>
-            <h1 className="font-editorial text-3xl sm:text-5xl font-extrabold text-[#1C2010] leading-tight">
-              Focus More on Writing,<br />Less on Formatting!
+            <h1 className="font-editorial text-4xl sm:text-6xl font-extrabold text-[#1C2010] leading-tight">
+              Focus More on Writing, Less on Formatting!
             </h1>
-            <p className="text-sm text-[#4F5B2A] max-w-xl mx-auto">
-              PublishStudio eliminates printing rejections. Calculate binding gutters, full-wrap spine bulks, safe zones, and multi-country royalties automatically.
+            <p className="text-base sm:text-lg text-[#4F5B2A] max-w-2xl mx-auto leading-relaxed">
+              PublishStudio eliminates printing rejections across Self Publishing Platforms. Calculate binding gutters, full-wrap spine bulks, safe zones, and multi-country royalties automatically.
             </p>
 
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
                 onClick={() => { setActiveView('studio'); setCurrentStep(1); }}
-                className="w-full sm:w-auto px-7 py-3 rounded-full soft-btn-primary text-xs font-bold flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+                className="w-full sm:w-auto px-8 py-3.5 rounded-full soft-btn-primary text-xs font-bold flex items-center justify-center gap-2 shadow-lg cursor-pointer"
               >
                 <span>Launch Book Production Studio</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
               <button
                 onClick={() => { setActiveView('studio'); setCurrentStep(2); }}
-                className="w-full sm:w-auto px-6 py-3 rounded-full soft-btn-pill text-xs font-bold text-[#1C2010] cursor-pointer"
+                className="w-full sm:w-auto px-7 py-3.5 rounded-full soft-btn-pill text-xs font-bold text-[#1C2010] cursor-pointer"
               >
                 Explore Demo Proof
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6">
-            <div className="p-6 rounded-3xl soft-raised space-y-3">
-              <div className="w-8 h-8 rounded-xl bg-[#4F5B2A] text-white flex items-center justify-center font-bold text-xs">A</div>
-              <h3 className="font-editorial text-lg font-bold">Text-Rich Manuscripts</h3>
-              <p className="text-xs text-[#4F5B2A]">Novels, memoirs, non-fiction, poetry with automated gutter calculations and running headers.</p>
+          {/* FORMAT PREVIEW CARDS */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="p-8 rounded-3xl soft-raised space-y-3 bg-[#F5EFE3]">
+              <div className="w-10 h-10 rounded-2xl bg-[#4F5B2A] text-white flex items-center justify-center font-bold text-sm shadow-xs">A</div>
+              <h3 className="font-editorial text-xl font-bold text-[#1C2010]">Text-Rich Manuscripts</h3>
+              <p className="text-xs sm:text-sm text-[#4F5B2A] leading-relaxed">Novels, memoirs, non-fiction, and poetry with automated gutter calculations and running headers optimized for trade standards.</p>
             </div>
 
-            <div className="p-6 rounded-3xl soft-raised space-y-3">
-              <div className="w-8 h-8 rounded-xl bg-[#B8892D] text-white flex items-center justify-center font-bold text-xs">B</div>
-              <h3 className="font-editorial text-lg font-bold">Low-Content Creations</h3>
-              <p className="text-xs text-[#4F5B2A]">Planners, journals, daily trackers with 300 DPI preservation and barcode exclusion zones.</p>
+            <div className="p-8 rounded-3xl soft-raised space-y-3 bg-[#F5EFE3]">
+              <div className="w-10 h-10 rounded-2xl bg-[#B8892D] text-white flex items-center justify-center font-bold text-sm shadow-xs">B</div>
+              <h3 className="font-editorial text-xl font-bold text-[#1C2010]">Low-Content Creations</h3>
+              <p className="text-xs sm:text-sm text-[#4F5B2A] leading-relaxed">Planners, journals, and daily trackers with 300 DPI preservation and barcode exclusion zones tailored for Print on Demand (PoD).</p>
             </div>
           </div>
+
+          {/* WHY INDEPENDENT AUTHORS CHOOSE US */}
+          <div className="space-y-8 pt-4">
+            <div className="text-center space-y-2 max-w-xl mx-auto">
+              <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[#1C2010]">Why Independent Authors Choose Us</h2>
+              <p className="text-xs sm:text-sm text-[#4F5B2A]">Built for creators who value speed, absolute privacy, and flawless print compliance.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              
+              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3]">
+                <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">1. Clean Formatting in Seconds</h4>
+                <p className="text-xs text-[#4F5B2A] leading-relaxed">Transform raw text into structured layouts and export your publication-ready files with one click.</p>
+              </div>
+
+              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3]">
+                <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">2. 100% Client-Side Privacy</h4>
+                <p className="text-xs text-[#4F5B2A] leading-relaxed">Your data stays with you. We do not save or store your manuscript files on external servers.</p>
+              </div>
+
+              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3]">
+                <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">3. Smart Local History</h4>
+                <p className="text-xs text-[#4F5B2A] leading-relaxed">Automatically remembers your recent book project history locally so you never lose your flow.</p>
+              </div>
+
+              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3]">
+                <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">4. Category Precision</h4>
+                <p className="text-xs text-[#4F5B2A] leading-relaxed">Calculates precise specifications tailored to your specific book genre and trim selection.</p>
+              </div>
+
+              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3]">
+                <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">5. Live Preview & Quick-Fix</h4>
+                <p className="text-xs text-[#4F5B2A] leading-relaxed">Inspect formatted pages live and use built-in Quick-Fix tools to correct text issues instantly.</p>
+              </div>
+
+              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3]">
+                <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">6. Cover & Margin Guidelines</h4>
+                <p className="text-xs text-[#4F5B2A] leading-relaxed">Generate complete cover wrap specs, run live checks, and download templates for free.</p>
+              </div>
+
+            </div>
+
+            <div className="p-8 rounded-3xl soft-raised bg-[#F5EFE3] space-y-2">
+              <h4 className="font-bold text-sm text-[#1C2010]">7. Multi-Market Revenue Alignment & Much More</h4>
+              <p className="text-xs sm:text-sm text-[#4F5B2A] leading-relaxed">
+                Guide your pricing strategy with automated cost and revenue estimations across international currencies and global Print on Demand (PoD) markets. PublishStudio is built as an evolving Book OS with continuous updates to streamline your publishing journey.
+              </p>
+            </div>
+          </div>
+
         </main>
       )}
 
@@ -551,7 +613,8 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
               </div>
             </div>
           )}
-                    {/* STEP 2: INTERIOR PROOF */}
+
+          {/* STEP 2: INTERIOR PROOF */}
           {currentStep === 2 && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
@@ -715,7 +778,8 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                     <span className="text-[10px] text-[#4F5B2A] block font-mono">{annualReportData.scaled.annualUnits} units/yr</span>
                   </div>
                 </div>
-                            {/* FORMAT CONTROLLER */}
+
+                {/* FORMAT CONTROLLER */}
                 <div className="p-3.5 rounded-2xl soft-inset flex flex-col sm:flex-row items-center justify-between gap-3">
                   <span className="text-xs font-bold uppercase text-[#1C2010]">Publishing Format:</span>
                   <div className="flex gap-1.5">
@@ -837,7 +901,8 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
               </div>
             </div>
           )}
-                   {/* DOCK BAR */}
+
+          {/* DOCK BAR */}
           <div className="fixed bottom-0 left-0 right-0 z-30 p-3 bg-white/95 backdrop-blur-md flex items-center justify-between max-w-5xl mx-auto border-t border-black/10">
             <button onClick={() => setActiveView('home')} className="px-4 py-2 rounded-full text-xs font-semibold soft-btn-pill cursor-pointer">
               Home Overview
@@ -951,7 +1016,8 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
           </div>
         </div>
       )}
-            {/* MY BOOKS SHELF */}
+
+      {/* MY BOOKS SHELF */}
       {isShelfOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-3xl p-6 soft-raised space-y-4">

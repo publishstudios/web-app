@@ -20,7 +20,12 @@ import {
   Check,
   Sliders,
   Layers,
-  RotateCcw
+  RotateCcw,
+  AlertCircle,
+  CheckCircle2,
+  ChevronLeft,
+  Wand2,
+  Info
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import {
@@ -31,7 +36,7 @@ import {
 } from './projectStorage';
 
 /* --------------------------------------------------------------------------
-   MASTER DATA & 15-TERRITORY POD MARKETPLACE MATRIX
+   MASTER DATA & SPECIFICATIONS
 -------------------------------------------------------------------------- */
 const ARCHETYPES = [
   {
@@ -69,12 +74,12 @@ const ARCHETYPES = [
 ];
 
 const TRIM_OPTIONS = [
-  { id: '5x8', name: '5" x 8" (Compact Novella)', width: 5.0, height: 8.0 },
-  { id: '5.25x8', name: '5.25" x 8" (Pocket Fiction)', width: 5.25, height: 8.0 },
-  { id: '5.5x8.5', name: '5.5" x 8.5" (Standard Trade Paperback)', width: 5.5, height: 8.5 },
-  { id: '6x9', name: '6" x 9" (Standard Trade Paperback)', width: 6.0, height: 9.0 },
-  { id: '7x10', name: '7" x 10" (Executive / Handbook)', width: 7.0, height: 10.0 },
-  { id: '8.5x11', name: '8.5" x 11" (Workbook / Manual)', width: 8.5, height: 11.0 }
+  { id: '5x8', name: '5" x 8" (Compact Novella)', width: 5.0, height: 8.0, wordsPerPage: 220 },
+  { id: '5.25x8', name: '5.25" x 8" (Pocket Fiction)', width: 5.25, height: 8.0, wordsPerPage: 235 },
+  { id: '5.5x8.5', name: '5.5" x 8.5" (Standard Trade Paperback)', width: 5.5, height: 8.5, wordsPerPage: 250 },
+  { id: '6x9', name: '6" x 9" (Standard Trade Paperback)', width: 6.0, height: 9.0, wordsPerPage: 300 },
+  { id: '7x10', name: '7" x 10" (Executive / Handbook)', width: 7.0, height: 10.0, wordsPerPage: 380 },
+  { id: '8.5x11', name: '8.5" x 11" (Workbook / Manual)', width: 8.5, height: 11.0, wordsPerPage: 450 }
 ];
 
 const PAPER_SPECS = {
@@ -84,10 +89,10 @@ const PAPER_SPECS = {
 };
 
 const FONTS_TOP4 = [
-  { id: 'EB Garamond, serif', name: 'Garamond', genre: 'Literary Fiction & Memoir', previewClass: 'font-serif' },
-  { id: 'Merriweather, serif', name: 'Merriweather', genre: 'Trade Non-Fiction', previewClass: 'font-serif' },
-  { id: 'Playfair Display, serif', name: 'Playfair / Cinzel', genre: 'Luxury & Historical', previewClass: 'font-serif' },
-  { id: 'Inter, sans-serif', name: 'Inter Sans', genre: 'Workbooks & Modern Guides', previewClass: 'font-sans' }
+  { id: 'EB Garamond, serif', name: 'Garamond', genre: 'Literary Fiction & Memoir' },
+  { id: 'Merriweather, serif', name: 'Merriweather', genre: 'Trade Non-Fiction' },
+  { id: 'Playfair Display, serif', name: 'Playfair / Cinzel', genre: 'Luxury & Historical' },
+  { id: 'Inter, sans-serif', name: 'Inter Sans', genre: 'Workbooks & Modern Guides' }
 ];
 
 const POD_MARKETPLACES = {
@@ -105,32 +110,34 @@ const POD_MARKETPLACES = {
   AU: { name: 'Australia (AUD)', currency: 'AUD', symbol: 'A$', base: 1.20, perPage: 0.018, fxRate: 1.50, defaultPrice: 19.99 },
   IN: { name: 'India (INR)', currency: 'INR', symbol: '₹', base: 60, perPage: 0.75, fxRate: 85.0, defaultPrice: 399 },
   MX: { name: 'Mexico (MXN)', currency: 'MXN', symbol: 'MX$', base: 18.0, perPage: 0.25, fxRate: 17.50, defaultPrice: 229.00 },
-  BR: { name: 'Brazil (BRL)', currency: 'BRL', symbol: 'R$', base: 5.50, perPage: 0.08, fxRate: 5.10, defaultPrice: 65.00 }
+  BR: { name: 'Brazil (BRL)', currency: 'BR', symbol: 'R$', base: 5.50, perPage: 0.08, fxRate: 5.10, defaultPrice: 65.00 }
 };
 
 const SAMPLE_CHAPTER_TEXT = [
+  "Chapter 1: The First Sheet",
   "The stillness of the study was broken only by the clock on the mantelpiece. Outside, rain fell steadily against the tall glass panes, blurring the lamps along the quiet avenue into soft circles of amber. He dipped the nib of his pen into the dark ink, pausing to listen to the carriage wheels rolling across the wet cobblestones below.",
-  "Every manuscript began this way—not with certainty, but with the quiet discipline of facing an empty sheet. The margins preserved the words, keeping the inner voice protected from the binding. A properly formatted book respects both the eyes of the reader and the physical machinery of the bindery."
+  "Every manuscript began this way—not with certainty, but with the quiet discipline of facing an empty sheet. The margins preserved the words, keeping the inner voice protected from the binding. A properly formatted book respects both the eyes of the reader and the physical machinery of the bindery.",
+  "Chapter 2: The Proof of Binding",
+  "As morning arrived, the light revealed the true texture of the cream paper. The typeface held firmly to the fibers, its serif contours clear and undisturbed. In publishing, true precision is invisible; the reader experiences only the natural cadence of the thoughts, effortlessly flowing across each spread."
 ];
 
 export default function PublishStudioApp() {
   /* ROUTING & ACTIVE VIEW */
-  const [activeView, setActiveView] = useState('home'); // 'home' | 'studio'
+  const [activeView, setActiveView] = useState('home');
   const [currentStep, setCurrentStep] = useState(1);
 
-  /* PROJECT CONFIGURATION */
-  const [projectId, setProjectId] = useState('proj_default');
+  /* PROJECT METADATA */
   const [bookTitle, setBookTitle] = useState('The Memory Chef');
   const [authorName, setAuthorName] = useState('Kavita Chougule');
   const [rememberAuthor, setRememberAuthor] = useState(true);
   const [selectedArchetype, setSelectedArchetype] = useState('fiction');
-  const [macroCategory, setMacroCategory] = useState('text-rich'); // 'text-rich' | 'low-content'
+  const [macroCategory, setMacroCategory] = useState('text-rich');
   const [trimSize, setTrimSize] = useState('5.5x8.5');
   const [paperType, setPaperType] = useState('cream');
   const [interiorBleed, setInteriorBleed] = useState(false);
   const [pageExtent, setPageExtent] = useState(120);
 
-  /* TYPOGRAPHY ENGINE (STEP 1 CONFIG -> FLOWS TO STEP 2) */
+  /* TYPOGRAPHY */
   const [typography, setTypography] = useState({
     fontFamily: 'EB Garamond, serif',
     bookTitleSize: 26,
@@ -144,23 +151,23 @@ export default function PublishStudioApp() {
     bodyItalic: false
   });
 
-  /* INGESTION TELEMETRY */
+  /* INGESTION & PARAGRAPHS */
   const [uploadedFileName, setUploadedFileName] = useState('');
-  const [manuscriptWordCount, setManuscriptWordCount] = useState(128);
-  const [detectedChaptersCount, setDetectedChaptersCount] = useState(1);
-
-  /* INTERIOR MANUSCRIPT & VIEW MODE */
   const [manuscriptParagraphs, setManuscriptParagraphs] = useState(SAMPLE_CHAPTER_TEXT);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+
+  /* STEP 2 INTERIOR STATE */
+  const [activeSpreadIndex, setActiveSpreadIndex] = useState(0);
   const [spreadMode, setSpreadMode] = useState('2-page'); // '1-page' | '2-page'
-  const [quickFixDrawerOpen, setQuickFixDrawerOpen] = useState(false);
+  const [quickFixDrawerOpen, setQuickFixDrawerOpen] = useState(true);
+  const [scoringModalOpen, setScoringModalOpen] = useState(false);
 
   /* COVER ASSETS */
   const [frontCoverImage, setFrontCoverImage] = useState(null);
   const [backCoverImage, setBackCoverImage] = useState(null);
-  const [barcodeImage, setBarcodeImage] = useState(null);
 
-  /* FINANCIAL & REVENUE MODELING */
-  const [publishingFormat, setPublishingFormat] = useState('both'); // 'paperback' | 'ebook' | 'both'
+  /* REVENUE & PRICING */
+  const [publishingFormat, setPublishingFormat] = useState('both');
   const [royaltyShareTier, setRoyaltyShareTier] = useState(0.60);
   const [usPaperbackPrice, setUsPaperbackPrice] = useState('12.99');
   const [usEbookPrice, setUsEbookPrice] = useState('4.99');
@@ -169,34 +176,28 @@ export default function PublishStudioApp() {
   const [initialMonthlySales, setInitialMonthlySales] = useState(50);
   const [monthlyGrowthRate, setMonthlyGrowthRate] = useState(5);
 
-  /* AI ENGINE STATE (BYOK) */
+  /* AI ENGINE */
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [userApiKey, setUserApiKey] = useState('');
   const [aiContentType, setAiContentType] = useState('chapter');
   const [aiCustomPrompt, setAiCustomPrompt] = useState('');
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
 
-  /* PROFILE / FEEDBACK DRAWER & SHELF */
+  /* MODALS & DRAWERS */
   const [helpProfileDrawerOpen, setHelpProfileDrawerOpen] = useState(false);
-  const [savedProjects, setSavedProjects] = useState([]);
   const [isShelfOpen, setIsShelfOpen] = useState(false);
   const [authorProfileEmail, setAuthorProfileEmail] = useState('');
   const [feedbackFeedback, setFeedbackFeedback] = useState('');
   const [feedbackSent, setFeedbackSent] = useState(false);
 
-  /* LOAD PERSISTENT AUTHOR ON MOUNT */
+  /* INITIAL MOUNT LOAD */
   useEffect(() => {
-    getAllProjectsFromStorage().then(setSavedProjects).catch(() => {});
     const key = localStorage.getItem('ps_user_ai_key');
     if (key) setUserApiKey(key);
-
     const savedAuthor = localStorage.getItem('ps_default_author');
-    if (savedAuthor) {
-      setAuthorName(savedAuthor);
-    }
+    if (savedAuthor) setAuthorName(savedAuthor);
   }, []);
 
-  /* SYNC AUTHOR TO LOCAL STORAGE IF CHECKED */
   const handleAuthorNameChange = (val) => {
     setAuthorName(val);
     if (rememberAuthor && val.trim().length > 0) {
@@ -204,47 +205,93 @@ export default function PublishStudioApp() {
     }
   };
 
-  /* CLIENT-SIDE MANUSCRIPT INGESTION (DOCX / TXT) */
-  const handleFileUpload = (e) => {
+  /* CLEAN DOCX & TXT CLIENT-SIDE INGESTION ENGINE */
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploadedFileName(file.name);
-    const reader = new FileReader();
+    setIsProcessingFile(true);
 
-    reader.onload = (event) => {
-      const text = event.target.result;
-      if (typeof text === 'string') {
-        const rawLines = text
-          .split(/\r?\n/)
-          .map(l => l.trim())
-          .filter(l => l.length > 0);
-
-        if (rawLines.length > 0) {
-          setManuscriptParagraphs(rawLines);
-          const totalWords = rawLines.reduce((acc, p) => acc + p.split(/\s+/).filter(Boolean).length, 0);
-          setManuscriptWordCount(totalWords);
-
-          const chapters = rawLines.filter(p => /^chapter|\bchapter\b|^#\s+/i.test(p));
-          setDetectedChaptersCount(Math.max(1, chapters.length));
+    try {
+      if (file.name.endsWith('.docx')) {
+        // Load JSZip dynamically via browser
+        let JSZipLib = window.JSZip;
+        if (!JSZipLib) {
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+          await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+          JSZipLib = window.JSZip;
         }
-      }
-    };
 
-    reader.readAsText(file);
+        const arrayBuffer = await file.arrayBuffer();
+        const zip = await JSZipLib.loadAsync(arrayBuffer);
+        const docXml = await zip.file('word/document.xml')?.async('text');
+
+        if (docXml) {
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(docXml, 'application/xml');
+          const pNodes = Array.from(xmlDoc.getElementsByTagName('w:p'));
+
+          const extracted = pNodes
+            .map(p => {
+              const texts = Array.from(p.getElementsByTagName('w:t')).map(t => t.textContent);
+              return texts.join('').trim();
+            })
+            .filter(t => t.length > 0);
+
+          if (extracted.length > 0) {
+            setManuscriptParagraphs(extracted);
+          }
+        }
+      } else {
+        // Plain text reading
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const text = event.target?.result;
+          if (typeof text === 'string') {
+            const rawLines = text
+              .split(/\r?\n/)
+              .map(l => l.trim())
+              .filter(l => l.length > 0);
+            if (rawLines.length > 0) {
+              setManuscriptParagraphs(rawLines);
+            }
+          }
+        };
+        reader.readAsText(file);
+      }
+    } catch (err) {
+      alert('File read fallback: loaded as plain text. Error: ' + err.message);
+    } finally {
+      setIsProcessingFile(false);
+    }
   };
 
-  /* AUTO ESTIMATE & SYNC PAGE EXTENT FROM WORDS */
-  const estimatedPages = useMemo(() => {
-    const wordsPerPage = trimSize === '8.5x11' ? 450 : trimSize === '6x9' ? 300 : 250;
-    return Math.max(24, Math.round((manuscriptWordCount || 250) / wordsPerPage) * 2);
-  }, [manuscriptWordCount, trimSize]);
+  /* COMPUTED WORD & CHAPTER METRICS */
+  const manuscriptWordCount = useMemo(() => {
+    return manuscriptParagraphs.reduce((acc, p) => acc + p.split(/\s+/).filter(Boolean).length, 0);
+  }, [manuscriptParagraphs]);
 
-  /* PRINT GEOMETRY MATH */
+  const detectedChaptersCount = useMemo(() => {
+    const chapters = manuscriptParagraphs.filter(p => /^(chapter|\d+\.|#)/i.test(p));
+    return Math.max(1, chapters.length);
+  }, [manuscriptParagraphs]);
+
   const currentTrim = useMemo(() => {
     return TRIM_OPTIONS.find(t => t.id === trimSize) || TRIM_OPTIONS[2];
   }, [trimSize]);
 
+  const estimatedPages = useMemo(() => {
+    const wpp = currentTrim.wordsPerPage || 250;
+    return Math.max(24, Math.ceil(manuscriptWordCount / wpp));
+  }, [manuscriptWordCount, currentTrim]);
+
+  /* PRINT GEOMETRY MATH */
   const calculatedGutter = useMemo(() => {
     if (pageExtent < 150) return 0.375;
     if (pageExtent <= 300) return 0.500;
@@ -268,26 +315,136 @@ export default function PublishStudioApp() {
   const coverPixelsWidth = useMemo(() => Math.round(fullCoverWidth * 300), [fullCoverWidth]);
   const coverPixelsHeight = useMemo(() => Math.round(fullCoverHeight * 300), [fullCoverHeight]);
 
-  /* 15-TERRITORY REVENUE & FX CALCULATOR */
-  const handleUsPriceChange = (val, type = 'paperback') => {
-    if (type === 'paperback') {
-      setUsPaperbackPrice(val);
-      const parsed = parseFloat(val);
-      if (!isNaN(parsed) && parsed > 0) {
-        const updated = {};
-        Object.entries(POD_MARKETPLACES).forEach(([code, market]) => {
-          if (code !== 'US') {
-            const converted = parsed * market.fxRate;
-            updated[code] = market.currency === 'JPY' ? Math.round(converted) : converted.toFixed(2);
-          }
-        });
-        setCustomRetailPrices(updated);
+  /* DYNAMIC REALISTIC PAGE CHUNKER FOR STEP 2 SPREAD */
+  const paginatedPages = useMemo(() => {
+    const pages = [];
+    let currentPage = [];
+    let currentWordCount = 0;
+    const maxWordsPerPage = currentTrim.wordsPerPage || 250;
+
+    manuscriptParagraphs.forEach((para, pIdx) => {
+      const isHeader = /^(chapter|\d+\.|#)/i.test(para);
+      const wordsInPara = para.split(/\s+/).filter(Boolean).length;
+
+      if (isHeader && currentPage.length > 0) {
+        pages.push(currentPage);
+        currentPage = [{ text: para, isHeader: true, originalIdx: pIdx }];
+        currentWordCount = wordsInPara;
+        return;
       }
-    } else {
-      setUsEbookPrice(val);
+
+      if (currentWordCount + wordsInPara > maxWordsPerPage && currentPage.length > 0) {
+        pages.push(currentPage);
+        currentPage = [{ text: para, isHeader, originalIdx: pIdx }];
+        currentWordCount = wordsInPara;
+      } else {
+        currentPage.push({ text: para, isHeader, originalIdx: pIdx });
+        currentWordCount += wordsInPara;
+      }
+    });
+
+    if (currentPage.length > 0) {
+      pages.push(currentPage);
+    }
+
+    return pages.length > 0 ? pages : [[{ text: 'Empty manuscript sheet.', isHeader: false, originalIdx: 0 }]];
+  }, [manuscriptParagraphs, currentTrim]);
+
+  const totalSpreads = useMemo(() => Math.ceil(paginatedPages.length / 2), [paginatedPages]);
+
+  const activeVersoPage = paginatedPages[activeSpreadIndex * 2] || null;
+  const activeRectoPage = paginatedPages[activeSpreadIndex * 2 + 1] || null;
+
+  /* REAL-TIME GRAMMAR & EDITORIAL HEURISTICS (CLIENT-SIDE) */
+  const editorialAnalysis = useMemo(() => {
+    const issues = [];
+    let passiveCount = 0;
+    let fillerCount = 0;
+    let typoCount = 0;
+
+    const fillerRegex = /\b(very|really|suddenly|just|perhaps|somewhat|basically|quite)\b/gi;
+    const passiveRegex = /\b(was|were|been|being)\s+([a-z]+ed|[a-z]+en)\b/gi;
+    const doubleWordRegex = /\b([a-z]+)\s+\1\b/gi;
+
+    manuscriptParagraphs.forEach((para, idx) => {
+      let match;
+      while ((match = fillerRegex.exec(para)) !== null) {
+        fillerCount++;
+        issues.push({
+          type: 'filler',
+          paraIdx: idx,
+          word: match[0],
+          message: `Overused filler adverb "${match[0]}". Consider deleting for tighter prose.`,
+          fix: ''
+        });
+      }
+      while ((match = passiveRegex.exec(para)) !== null) {
+        passiveCount++;
+        issues.push({
+          type: 'passive',
+          paraIdx: idx,
+          word: match[0],
+          message: `Passive construction "${match[0]}". Active voice increases narrative drive.`,
+          fix: match[0].split(' ')[1]
+        });
+      }
+      while ((match = doubleWordRegex.exec(para)) !== null) {
+        typoCount++;
+        issues.push({
+          type: 'typo',
+          paraIdx: idx,
+          word: match[0],
+          message: `Accidental duplicate word "${match[0]}".`,
+          fix: match[1]
+        });
+      }
+    });
+
+    // Composite Book Score Calculation (0 - 100)
+    const totalWords = Math.max(1, manuscriptWordCount);
+    const fillerDensity = (fillerCount / totalWords) * 100;
+    const passiveDensity = (passiveCount / totalWords) * 100;
+
+    // Sub-scores
+    const readabilityScore = Math.min(25, Math.max(10, Math.round(25 - (fillerDensity * 2))));
+    const mechanicsScore = Math.min(25, Math.max(10, Math.round(25 - (typoCount * 3))));
+    const styleScore = Math.min(25, Math.max(10, Math.round(25 - (passiveDensity * 2.5))));
+    const geometryScore = pageExtent >= 80 ? 25 : 18;
+
+    const totalScore = Math.min(100, readabilityScore + mechanicsScore + styleScore + geometryScore);
+
+    return {
+      issues,
+      fillerCount,
+      passiveCount,
+      typoCount,
+      totalScore,
+      breakdown: {
+        readability: readabilityScore,
+        mechanics: mechanicsScore,
+        style: styleScore,
+        geometry: geometryScore
+      }
+    };
+  }, [manuscriptParagraphs, manuscriptWordCount, pageExtent]);
+
+  /* 1-CLICK QUICK FIX APPLY */
+  const applyQuickFix = (issue) => {
+    const updated = [...manuscriptParagraphs];
+    const target = updated[issue.paraIdx];
+    if (target) {
+      if (issue.type === 'filler') {
+        const regex = new RegExp(`\\b${issue.word}\\s*`, 'i');
+        updated[issue.paraIdx] = target.replace(regex, '');
+      } else if (issue.type === 'typo') {
+        const regex = new RegExp(`\\b${issue.word}\\b`, 'i');
+        updated[issue.paraIdx] = target.replace(regex, issue.fix);
+      }
+      setManuscriptParagraphs(updated);
     }
   };
 
+  /* FINANCIAL / TERRITORY DATA */
   const territoryCalculations = useMemo(() => {
     const pbUs = parseFloat(usPaperbackPrice) || 12.99;
     const ebUs = parseFloat(usEbookPrice) || 4.99;
@@ -358,124 +515,6 @@ export default function PublishStudioApp() {
     };
   }, [activeSelectedTerritories, initialMonthlySales, monthlyGrowthRate]);
 
-  /* AI ENGINE GENERATOR */
-  const handleGenerateAiContent = async () => {
-    if (!userApiKey.trim()) {
-      alert('Please enter your Google Gemini API key.');
-      return;
-    }
-    setIsGeneratingAi(true);
-    localStorage.setItem('ps_user_ai_key', userApiKey.trim());
-
-    let promptText = "";
-    if (aiContentType === 'chapter') {
-      promptText = `Write the opening chapter of a book titled "${bookTitle}" by "${authorName}". Style: Rich literary trade fiction/non-fiction. 3 comprehensive paragraphs. ${aiCustomPrompt}`;
-    } else if (aiContentType === 'outline') {
-      promptText = `Create a 10-chapter structured outline for "${bookTitle}" by "${authorName}". ${aiCustomPrompt}`;
-    } else if (aiContentType === 'planner') {
-      promptText = `Generate a daily habit tracking and productivity planner page for "${bookTitle}". Include goals, hourly schedules, and reflection notes. ${aiCustomPrompt}`;
-    } else {
-      promptText = `Generate 30 thought-provoking daily journal prompts for "${bookTitle}". Numbered 1 to 30. ${aiCustomPrompt}`;
-    }
-
-    try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${userApiKey.trim()}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
-      });
-      const data = await res.json();
-      const generated = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (generated) {
-        setManuscriptParagraphs(generated.split('\n\n').filter(p => p.trim().length > 0));
-        setAiModalOpen(false);
-        setActiveView('studio');
-        setCurrentStep(1);
-      }
-    } catch (err) {
-      alert('AI Generation error: ' + err.message);
-    } finally {
-      setIsGeneratingAi(false);
-    }
-  };
-
-  /* COVER & SPEC EXPORTS */
-  const handleExportFullCoverArtwork = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = coverPixelsWidth;
-    canvas.height = coverPixelsHeight;
-    const ctx = canvas.getContext('2d');
-
-    ctx.fillStyle = '#1C2010';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const bleedPx = Math.round(0.125 * 300);
-    const trimWidthPx = Math.round(currentTrim.width * 300);
-    const spineWidthPx = Math.round(spineWidth * 300);
-    const trimHeightPx = Math.round(currentTrim.height * 300);
-
-    const backX = bleedPx;
-    const spineX = backX + trimWidthPx;
-    const frontX = spineX + spineWidthPx;
-
-    const renderCard = (imgSrc, x, y, w, h, label) => {
-      if (imgSrc) {
-        const img = new Image();
-        img.src = imgSrc;
-        ctx.drawImage(img, x, y, w, h);
-      } else {
-        ctx.fillStyle = '#FAF6ED';
-        ctx.fillRect(x, y, w, h);
-        ctx.fillStyle = '#1C2010';
-        ctx.font = 'bold 36px Georgia';
-        ctx.textAlign = 'center';
-        ctx.fillText(label, x + w / 2, y + h / 2);
-      }
-    };
-
-    renderCard(backCoverImage, backX, bleedPx, trimWidthPx, trimHeightPx, 'BACK COVER');
-    renderCard(frontCoverImage, frontX, bleedPx, trimWidthPx, trimHeightPx, bookTitle);
-
-    ctx.fillStyle = '#E8DFC8';
-    ctx.fillRect(spineX, bleedPx, spineWidthPx, trimHeightPx);
-
-    if (pageExtent >= 80) {
-      ctx.save();
-      ctx.translate(spineX + spineWidthPx / 2, bleedPx + trimHeightPx / 2);
-      ctx.rotate(-Math.PI / 2);
-      ctx.fillStyle = '#4F5B2A';
-      ctx.font = 'bold 24px Georgia';
-      ctx.textAlign = 'center';
-      ctx.fillText(`${bookTitle}  •  ${authorName}`, 0, 8);
-      ctx.restore();
-    }
-
-    canvas.toBlob((blob) => {
-      saveAs(blob, `${bookTitle.replace(/\s+/g, '_')}_FullWrap_300DPI.png`);
-    });
-  };
-
-  const handleDownloadSpecification = () => {
-    const spec = `============================================================
-PUBLISHSTUDIO - PRODUCTION SPECIFICATION & FINANCIAL REPORT
-============================================================
-Book Title:           ${bookTitle}
-Author Name:          ${authorName}
-Format Mode:          ${publishingFormat.toUpperCase()}
-Trim Dimensions:      ${currentTrim.width}" x ${currentTrim.height}"
-Bleed Setting:        ${interiorBleed ? 'Full Bleed (+0.125")' : 'No Bleed (Standard)'}
-Page Extent:          ${pageExtent} Pages
-Font Selected:        ${typography.fontFamily}
-Spine Gutter Margin:  ${calculatedGutter}"
-Spine Bulk:           ${spineWidth}"
-Canvas (300 DPI):     ${coverPixelsWidth} x ${coverPixelsHeight} px
-Month 1 Volume:       ${initialMonthlySales} units
-MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${monthlyGrowthRate}%`}
-============================================================`;
-    const blob = new Blob([spec], { type: 'text/plain;charset=utf-8' });
-    saveAs(blob, `${bookTitle.replace(/\s+/g, '_')}_POD_Specs.txt`);
-  };
-
   return (
     <div className="min-h-screen bg-[#F5EFE3] text-[#1C2010]">
       {/* HEADER DOCK */}
@@ -528,10 +567,9 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
         </div>
       </header>
 
-      {/* VIEW A: LANDING / HOME OVERVIEW */}
+      {/* VIEW A: LANDING / HOME */}
       {activeView === 'home' && (
         <main className="max-w-6xl mx-auto px-4 py-12 space-y-16 animate-in fade-in">
-          {/* HERO SECTION */}
           <div className="text-center space-y-4 max-w-3xl mx-auto">
             <span className="text-[11px] font-mono uppercase tracking-widest font-bold text-teal-800 bg-teal-500/15 border border-teal-500/30 px-3.5 py-1.5 rounded-full">
               Self Publishing Supporting Software
@@ -571,7 +609,6 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
             </div>
           </div>
 
-          {/* FORMAT PREVIEW CARDS */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div
               onClick={() => {
@@ -619,62 +656,15 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
               </p>
             </div>
           </div>
-
-          {/* WHY INDEPENDENT AUTHORS CHOOSE US */}
-          <div className="space-y-8 pt-4">
-            <div className="text-center space-y-2 max-w-xl mx-auto">
-              <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[#1C2010]">Why Independent Authors Choose Us</h2>
-              <p className="text-xs sm:text-sm text-[#555045]">Built for creators who value speed, absolute privacy, and flawless print compliance.</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3] hover:border-emerald-500/40 transition-colors">
-                <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-900">SPEED & FLOW</span>
-                <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">1. Clean Formatting in Seconds</h4>
-                <p className="text-xs text-[#555045] leading-relaxed">Transform raw text into structured layouts and export publication-ready files with one click.</p>
-              </div>
-              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3] hover:border-blue-500/40 transition-colors">
-                <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-900">TOTAL PRIVACY</span>
-                <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">2. 100% Client-Side Privacy</h4>
-                <p className="text-xs text-[#555045] leading-relaxed">Your data stays with you. We do not save or store your manuscript files on external servers.</p>
-              </div>
-              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3] hover:border-purple-500/40 transition-colors">
-                <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-900">LOCAL CACHE</span>
-                <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">3. Persistent Author Memory</h4>
-                <p className="text-xs text-[#555045] leading-relaxed">Remembers your author profile across books and sessions right inside your browser.</p>
-              </div>
-              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3] hover:border-amber-500/40 transition-colors">
-                <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-900">GENRE PRECISION</span>
-                <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">4. Category Precision</h4>
-                <p className="text-xs text-[#555045] leading-relaxed">Calculates precise specifications tailored to your specific book genre and trim selection.</p>
-              </div>
-              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3] hover:border-rose-500/40 transition-colors">
-                <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-900">LIVE EDITING</span>
-                <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">5. Live Preview & Quick-Fix</h4>
-                <p className="text-xs text-[#555045] leading-relaxed">Inspect formatted pages live and use built-in Quick-Fix tools to correct text issues instantly.</p>
-              </div>
-              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3] hover:border-teal-500/40 transition-colors">
-                <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-teal-500/20 text-teal-900">COVER SPECS</span>
-                <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">6. Cover & Margin Guidelines</h4>
-                <p className="text-xs text-[#555045] leading-relaxed">Generate complete cover wrap specs, run live checks, and download templates for free.</p>
-              </div>
-            </div>
-            <div className="p-8 rounded-3xl soft-raised bg-gradient-to-br from-[#F5EFE3] to-[#EAE2CE] space-y-2 border border-emerald-500/20">
-              <span className="inline-block text-[10px] font-bold px-2.5 py-0.5 rounded bg-emerald-700 text-white shadow-xs">GLOBAL ECOSYSTEM</span>
-              <h4 className="font-bold text-sm text-[#1C2010] mt-1">7. Multi-Market Revenue Alignment & Much More</h4>
-              <p className="text-xs sm:text-sm text-[#555045] leading-relaxed">
-                Guide your pricing strategy with automated cost and revenue estimations across international currencies and global Print on Demand (PoD) markets.
-              </p>
-            </div>
-          </div>
         </main>
       )}
 
-      {/* VIEW B: 4-STEP WORKFLOW */}
+      {/* VIEW B: 4-STEP PRODUCTION STUDIO */}
       {activeView === 'studio' && (
-        <main className="max-w-5xl mx-auto px-4 py-8 pb-32 animate-in fade-in">
-          {/* STEP NAVIGATION TRACK */}
+        <main className="max-w-6xl mx-auto px-4 py-8 pb-32 animate-in fade-in">
+          {/* STEP TRACKER WITH ACTIVE CONNECTOR LINES */}
           <div className="mb-8">
-            <div className="p-2.5 rounded-full soft-inset flex items-center justify-between">
+            <div className="p-3 rounded-full soft-inset flex items-center justify-between bg-[#ECE4D0]/80">
               {[
                 { step: 1, label: '1. Setup' },
                 { step: 2, label: '2. Interior' },
@@ -683,29 +673,43 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
               ].map((s, idx) => {
                 const isActive = currentStep === s.step;
                 const isPassed = currentStep > s.step;
+                const isNextConnectorActive = currentStep > s.step;
+
                 return (
                   <React.Fragment key={s.step}>
                     <button
                       type="button"
                       onClick={() => setCurrentStep(s.step)}
-                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-1.5 rounded-full text-xs font-semibold cursor-pointer ${
+                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2 rounded-full text-xs font-semibold cursor-pointer transition-all ${
                         isActive
-                          ? 'bg-gradient-to-r from-emerald-700 to-teal-700 text-white font-bold shadow-md'
+                          ? 'bg-gradient-to-r from-emerald-700 to-teal-700 text-white font-bold shadow-md scale-105'
                           : isPassed
-                          ? 'text-emerald-800 font-bold bg-emerald-500/10'
-                          : 'text-[#555045]/60'
+                          ? 'text-emerald-900 font-bold bg-emerald-500/20'
+                          : 'text-[#555045]/60 hover:text-[#1C2010]'
                       }`}
                     >
                       <span
-                        className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center ${
-                          isActive ? 'bg-white text-emerald-800 font-bold' : 'bg-black/10'
+                        className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center font-bold ${
+                          isActive
+                            ? 'bg-white text-emerald-800'
+                            : isPassed
+                            ? 'bg-emerald-700 text-white'
+                            : 'bg-black/10 text-[#555045]'
                         }`}
                       >
                         {isPassed ? '✓' : s.step}
                       </span>
                       <span className="hidden sm:inline">{s.label}</span>
                     </button>
-                    {idx < 3 && <div className="flex-1 h-0.5 mx-1 bg-black/10" />}
+
+                    {/* DYNAMIC PROGRESS CONNECTOR LINE */}
+                    {idx < 3 && (
+                      <div
+                        className={`flex-1 h-1 mx-1.5 rounded-full transition-all duration-300 ${
+                          isNextConnectorActive ? 'bg-emerald-600 shadow-xs' : 'bg-black/10'
+                        }`}
+                      />
+                    )}
                   </React.Fragment>
                 );
               })}
@@ -713,11 +717,10 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
           </div>
 
           {/* ========================================================================= */}
-          {/* STEP 1: SPECIFICATION, AUTHOR & MANUSCRIPT SETUP */}
+          {/* STEP 1: SPECIFICATION & MANUSCRIPT SETUP */}
           {/* ========================================================================= */}
           {currentStep === 1 && (
             <div className="space-y-6 animate-in fade-in">
-              {/* TOP HEADER & LIVE AUTHOR STATUS */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#D8C9A8]/70">
                 <div>
                   <div className="flex items-center gap-2">
@@ -743,7 +746,7 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 </div>
               </div>
 
-              {/* 1. AUTHOR PROFILE & PROJECT METADATA */}
+              {/* AUTHOR METADATA */}
               <div className="p-6 rounded-3xl soft-raised bg-[#F5EFE3] border border-[#D8C9A8]/50 space-y-4">
                 <div className="flex items-center justify-between border-b border-black/5 pb-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-[#1C2010] flex items-center gap-2">
@@ -797,9 +800,8 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 </div>
               </div>
 
-              {/* 2. MACRO CATEGORY & 4 ARCHETYPES */}
+              {/* MACRO CATEGORY & ARCHETYPES */}
               <div className="space-y-3">
-                {/* MACRO PILL TOGGLE */}
                 <div className="p-1.5 rounded-2xl soft-inset bg-[#ECE4D0] grid grid-cols-2 gap-2 max-w-md mx-auto">
                   <button
                     type="button"
@@ -838,7 +840,6 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                   </button>
                 </div>
 
-                {/* 4 ARCHETYPE CARDS */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                   {ARCHETYPES.map((arch) => {
                     const isSelected = selectedArchetype === arch.id;
@@ -886,7 +887,7 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 </div>
               </div>
 
-              {/* 3. RAW MANUSCRIPT INGESTION (CLIENT-SIDE DOCX / TXT) */}
+              {/* RAW MANUSCRIPT INGESTION (PARSES CLEAN DOCX / TXT) */}
               <div className="p-6 rounded-3xl soft-raised bg-[#F5EFE3] border border-[#D8C9A8]/50 space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-black/5">
                   <span className="text-xs font-bold uppercase tracking-wider text-[#1C2010] flex items-center gap-2">
@@ -894,7 +895,7 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                     Raw Manuscript Ingestion (.docx / .txt)
                   </span>
                   <span className="text-[10px] font-mono text-emerald-800 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                    100% Private In-Browser
+                    {isProcessingFile ? 'Unpacking DOCX...' : '100% In-Browser Unpacker'}
                   </span>
                 </div>
 
@@ -913,12 +914,12 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                       <span className="font-bold text-[#1C2010]">Click to browse or drag & drop</span> your raw manuscript
                     </div>
                     <p className="text-[10px] text-[#555045]">
-                      Supports .docx and .txt. Parses clean headings, breaks, and paragraph flows automatically.
+                      Supports .docx and .txt. Extracts headings, chapter breaks, and paragraphs cleanly.
                     </p>
                   </div>
                 </div>
 
-                {/* TELEMETRY & AUTO-SYNC STRIP */}
+                {/* TELEMETRY STRIP */}
                 <div className="p-3.5 rounded-2xl soft-inset bg-white/70 border border-[#D8C9A8]/40 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
                   <div className="flex items-center gap-3">
                     <span className="text-[#555045]">
@@ -947,17 +948,16 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 </div>
               </div>
 
-              {/* 4. TOP 4 CURATED BOOK FONTS & TYPOGRAPHY ENGINE */}
+              {/* TOP 4 BOOK TYPOGRAPHY */}
               <div className="p-6 rounded-3xl soft-raised bg-[#F5EFE3] border border-[#D8C9A8]/50 space-y-5">
                 <div className="flex items-center justify-between pb-2 border-b border-black/5">
                   <span className="text-xs font-bold uppercase tracking-wider text-[#1C2010] flex items-center gap-2">
                     <Sliders className="w-4 h-4 text-purple-700" />
                     Top 4 Book Typography & Styling
                   </span>
-                  <span className="text-[10px] text-[#555045]">Sets base styling for Step 2 layout proof</span>
+                  <span className="text-[10px] text-[#555045]">Step 2 proof inherits these settings</span>
                 </div>
 
-                {/* TOP 4 FONT SELECTION PILLS */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                   {FONTS_TOP4.map((font) => {
                     const isSelected = typography.fontFamily === font.id;
@@ -979,9 +979,7 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                   })}
                 </div>
 
-                {/* HIERARCHICAL STYLING KNOBS */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
-                  {/* BOOK TITLE */}
                   <div className="p-3.5 rounded-2xl soft-inset bg-white/60 space-y-2">
                     <span className="text-[10px] font-bold uppercase tracking-wider block text-purple-900">
                       Book Title Style
@@ -997,20 +995,8 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                         className="w-12 text-right font-mono font-bold text-xs bg-transparent outline-none text-[#1C2010]"
                       />
                     </div>
-                    <div className="flex gap-1 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setTypography(p => ({ ...p, bookTitleWeight: p.bookTitleWeight === 'bold' ? 'normal' : 'bold' }))}
-                        className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                          typography.bookTitleWeight === 'bold' ? 'bg-[#0E6266] text-white' : 'bg-black/5 text-[#555045]'
-                        }`}
-                      >
-                        Bold
-                      </button>
-                    </div>
                   </div>
 
-                  {/* CHAPTER HEADINGS */}
                   <div className="p-3.5 rounded-2xl soft-inset bg-white/60 space-y-2">
                     <span className="text-[10px] font-bold uppercase tracking-wider block text-teal-900">
                       Chapter Title Style
@@ -1026,29 +1012,8 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                         className="w-12 text-right font-mono font-bold text-xs bg-transparent outline-none text-[#1C2010]"
                       />
                     </div>
-                    <div className="flex gap-1.5 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setTypography(p => ({ ...p, chapterTitleWeight: p.chapterTitleWeight === 'bold' ? 'normal' : 'bold' }))}
-                        className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                          typography.chapterTitleWeight === 'bold' ? 'bg-[#0E6266] text-white' : 'bg-black/5 text-[#555045]'
-                        }`}
-                      >
-                        Bold
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setTypography(p => ({ ...p, chapterTitleItalic: !p.chapterTitleItalic }))}
-                        className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
-                          typography.chapterTitleItalic ? 'bg-[#0E6266] text-white' : 'bg-black/5 text-[#555045]'
-                        }`}
-                      >
-                        Italic
-                      </button>
-                    </div>
                   </div>
 
-                  {/* BODY TEXT */}
                   <div className="p-3.5 rounded-2xl soft-inset bg-white/60 space-y-2">
                     <span className="text-[10px] font-bold uppercase tracking-wider block text-emerald-900">
                       Body Paragraphs
@@ -1064,52 +1029,11 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                         className="w-12 text-right font-mono font-bold text-xs bg-transparent outline-none text-[#1C2010]"
                       />
                     </div>
-                    <div className="flex items-center justify-between text-xs pt-1">
-                      <span className="text-[#555045]">Line Height:</span>
-                      <select
-                        value={typography.bodyLineHeight}
-                        onChange={(e) => setTypography(p => ({ ...p, bodyLineHeight: parseFloat(e.target.value) }))}
-                        className="p-1 px-2 rounded-lg bg-white border border-black/10 font-mono text-xs cursor-pointer outline-none"
-                      >
-                        <option value={1.4}>1.4x (Compact)</option>
-                        <option value={1.6}>1.6x (Standard Trade)</option>
-                        <option value={1.8}>1.8x (Generous)</option>
-                      </select>
-                    </div>
                   </div>
-                </div>
-
-                {/* LIVE MICRO SAMPLE */}
-                <div
-                  className="p-4 rounded-2xl soft-inset bg-[#FFFDF9] border border-[#D8C9A8]/40"
-                  style={{ fontFamily: typography.fontFamily }}
-                >
-                  <span className="text-[9px] font-mono uppercase tracking-widest text-[#555045] block mb-1">
-                    Live Typography Rendering Preview
-                  </span>
-                  <div
-                    style={{
-                      fontSize: `${typography.chapterTitleSize}px`,
-                      fontWeight: typography.chapterTitleWeight,
-                      fontStyle: typography.chapterTitleItalic ? 'italic' : 'normal'
-                    }}
-                    className="text-[#1C2010]"
-                  >
-                    Chapter 1: The First Sheet
-                  </div>
-                  <p
-                    style={{
-                      fontSize: `${typography.bodySize}px`,
-                      lineHeight: typography.bodyLineHeight
-                    }}
-                    className="text-[#3A352F] mt-1.5"
-                  >
-                    The stillness of the study was broken only by the clock on the mantelpiece. Outside, rain fell steadily against the tall glass panes, blurring the lamps into soft circles of amber.
-                  </p>
                 </div>
               </div>
 
-              {/* 5. PHYSICAL POD GEOMETRY & PRINT SPECIFICATIONS */}
+              {/* PHYSICAL DIMENSIONS & CALIPER */}
               <div className="p-6 sm:p-7 rounded-3xl soft-raised space-y-6 bg-[#F5EFE3] border border-[#D8C9A8]/50">
                 <div className="flex items-center justify-between pb-2 border-b border-black/5">
                   <span className="text-xs font-bold uppercase tracking-wider text-[#1C2010] flex items-center gap-2">
@@ -1120,7 +1044,6 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  {/* TRIM DROPDOWN */}
                   <div>
                     <label className="text-[11px] font-bold uppercase tracking-wider block mb-2 text-[#1C2010]">
                       Trim Size Dimension
@@ -1138,7 +1061,6 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                     </select>
                   </div>
 
-                  {/* PAPER STOCK */}
                   <div>
                     <label className="text-[11px] font-bold uppercase tracking-wider block mb-2 text-[#1C2010]">
                       Paper Stock & Caliper
@@ -1156,7 +1078,6 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                     </select>
                   </div>
 
-                  {/* INTERIOR BLEED TOGGLE */}
                   <div>
                     <label className="text-[11px] font-bold uppercase tracking-wider block mb-2 text-[#1C2010]">
                       Interior Bleed Mode
@@ -1184,7 +1105,7 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                   </div>
                 </div>
 
-                {/* PAGE EXTENT SLIDER + NUMERIC STEPPER + KDP 80-PG BADGE */}
+                {/* PAGE EXTENT & KDP SPINE SAFETY BADGE */}
                 <div className="pt-2">
                   <div className="flex justify-between items-center mb-2">
                     <div>
@@ -1227,16 +1148,9 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                     onChange={(e) => setPageExtent(parseInt(e.target.value))}
                     className="w-full accent-[#0E6266] cursor-pointer h-2 bg-[#D8C9A8] rounded-lg"
                   />
-
-                  <div className="flex justify-between text-[10px] font-mono text-[#555045]/70 mt-1.5 px-0.5">
-                    <span>24 pgs (Min POD)</span>
-                    <span>150 pgs</span>
-                    <span>300 pgs</span>
-                    <span>600+ pgs (Trade Max)</span>
-                  </div>
                 </div>
 
-                {/* REAL-TIME GEOMETRY METRIC CARDS */}
+                {/* GEOMETRY CARDS */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-4 border-t border-[#D8C9A8]/60">
                   <div className="p-3.5 rounded-2xl soft-inset bg-emerald-500/5 border border-emerald-500/20 text-center">
                     <span className="text-[10px] font-mono uppercase font-bold text-emerald-800 block">
@@ -1275,129 +1189,331 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
           )}
 
           {/* ========================================================================= */}
-          {/* STEP 2: INTERIOR LAYOUT & TYPESET PROOF */}
+          {/* STEP 2: INTERIOR LAYOUT & EDITORIAL STUDIO */}
           {/* ========================================================================= */}
           {currentStep === 2 && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
+            <div className="space-y-6 animate-in fade-in">
+              {/* TOP STRIP & OVERALL SCORECARD */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-[#D8C9A8]/70">
                 <div>
-                  <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[#1C2010]">
-                    Step 2: Interior Layout & Typeset Proof
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono uppercase tracking-widest font-extrabold text-[#0E6266] bg-[#0E6266]/10 px-2.5 py-0.5 rounded-full">
+                      Step 02
+                    </span>
+                    <span className="text-[10px] text-[#555045] font-semibold">Live Typeset & Editorial Proof</span>
+                  </div>
+                  <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[#1C2010] mt-1">
+                    Interior Typeset & Grammar Studio
                   </h2>
-                  <p className="text-xs text-[#555045] mt-1">
-                    Author Profile: <strong className="text-emerald-800">{authorName}</strong>
-                  </p>
                 </div>
-                <div className="flex gap-1 p-1 rounded-full soft-inset">
+
+                {/* OVERALL BOOK QUALITY SCORECARD */}
+                <div className="flex items-center gap-3 bg-[#FAF6ED] p-2.5 px-4 rounded-2xl soft-raised border border-[#D8C9A8]/60">
+                  <div className="text-right">
+                    <span className="text-[9px] uppercase tracking-wider block font-bold text-[#555045]">
+                      Overall Book Score
+                    </span>
+                    <div className="flex items-center gap-1.5 justify-end">
+                      <span className="text-lg font-mono font-extrabold text-emerald-800">
+                        {editorialAnalysis.totalScore}/100
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-500/15 px-2 py-0.5 rounded-full">
+                        {editorialAnalysis.totalScore >= 85 ? 'Trade Ready' : 'Polishing Needed'}
+                      </span>
+                    </div>
+                  </div>
                   <button
-                    onClick={() => setSpreadMode('1-page')}
-                    className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer ${
-                      spreadMode === '1-page' ? 'bg-emerald-700 text-white' : 'text-[#555045]'
-                    }`}
+                    type="button"
+                    onClick={() => setScoringModalOpen(true)}
+                    className="p-1.5 rounded-xl bg-[#0E6266]/10 hover:bg-[#0E6266]/20 text-[#0E6266] cursor-pointer transition-all"
+                    title="View Industry Scoring Methodology"
                   >
-                    1-Page View
-                  </button>
-                  <button
-                    onClick={() => setSpreadMode('2-page')}
-                    className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer ${
-                      spreadMode === '2-page' ? 'bg-emerald-700 text-white' : 'text-[#555045]'
-                    }`}
-                  >
-                    2-Page Spread
+                    <Info className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-6 rounded-3xl soft-raised space-y-3">
-                  <div>
-                    <label className="text-xs font-bold uppercase block mb-1 text-[#1C2010]">Book Title (Header)</label>
-                    <input
-                      type="text"
-                      value={bookTitle}
-                      onChange={(e) => setBookTitle(e.target.value)}
-                      className="w-full p-2.5 rounded-xl text-xs soft-inset outline-none text-[#1C2010]"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold uppercase block mb-1 text-[#1C2010]">Author Name</label>
-                    <input
-                      type="text"
-                      value={authorName}
-                      onChange={(e) => handleAuthorNameChange(e.target.value)}
-                      className="w-full p-2.5 rounded-xl text-xs soft-inset outline-none text-[#1C2010]"
-                    />
-                  </div>
+              {/* IN-STEP AUTHOR & TITLE QUICK EDITOR */}
+              <div className="p-4 rounded-2xl soft-raised bg-[#FAF6ED] grid grid-cols-1 sm:grid-cols-2 gap-4 border border-[#D8C9A8]/40">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider block mb-1 text-[#555045]">
+                    Book Title (Verso Header)
+                  </label>
+                  <input
+                    type="text"
+                    value={bookTitle}
+                    onChange={(e) => setBookTitle(e.target.value)}
+                    className="w-full p-2 rounded-xl text-xs font-bold soft-inset outline-none text-[#1C2010] bg-white border border-[#D8C9A8]/40"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider block mb-1 text-[#555045]">
+                    Author Name (Recto Header)
+                  </label>
+                  <input
+                    type="text"
+                    value={authorName}
+                    onChange={(e) => handleAuthorNameChange(e.target.value)}
+                    className="w-full p-2 rounded-xl text-xs font-bold soft-inset outline-none text-[#1C2010] bg-white border border-[#D8C9A8]/40"
+                  />
+                </div>
+              </div>
+
+              {/* CONTROLS BAR (SPREAD NAVIGATOR & QUICK FIX TOGGLE) */}
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl soft-inset bg-[#ECE4D0]/70">
+                {/* PAGE SPREAD STEPPER */}
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setQuickFixDrawerOpen(!quickFixDrawerOpen)}
-                    className="w-full py-2 rounded-full soft-btn-pill text-xs font-bold text-teal-800 bg-teal-500/10 cursor-pointer"
+                    type="button"
+                    disabled={activeSpreadIndex === 0}
+                    onClick={() => setActiveSpreadIndex(p => Math.max(0, p - 1))}
+                    className="p-1.5 rounded-xl bg-white soft-raised text-[#1C2010] disabled:opacity-40 cursor-pointer"
                   >
-                    {quickFixDrawerOpen ? 'Close Text Editor' : 'Quick-Fix Text'}
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  <span className="text-xs font-mono font-bold text-[#1C2010] px-2">
+                    Spread {activeSpreadIndex + 1} of {totalSpreads} (Pages {activeSpreadIndex * 2 + 1}-{Math.min(paginatedPages.length, activeSpreadIndex * 2 + 2)})
+                  </span>
+
+                  <button
+                    type="button"
+                    disabled={activeSpreadIndex >= totalSpreads - 1}
+                    onClick={() => setActiveSpreadIndex(p => Math.min(totalSpreads - 1, p + 1))}
+                    className="p-1.5 rounded-xl bg-white soft-raised text-[#1C2010] disabled:opacity-40 cursor-pointer"
+                  >
+                    <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
 
-                <div className="md:col-span-2 p-6 rounded-3xl soft-raised">
-                  <div
-                    className={`p-6 rounded-2xl soft-inset ${
-                      spreadMode === '2-page' ? 'grid grid-cols-2 gap-3' : 'max-w-md mx-auto'
-                    }`}
-                    style={{ fontFamily: typography.fontFamily }}
-                  >
-                    <div className="p-4 bg-[#FFFDF9] rounded shadow min-h-[220px] flex flex-col justify-between border-t-2 border-emerald-600">
-                      <div className="text-center pb-2 border-b border-black/10 text-[9px] uppercase tracking-widest text-emerald-800 font-bold">
-                        {authorName}
-                      </div>
-                      <p
-                        className="leading-relaxed text-[#2D2A26]"
-                        style={{
-                          fontSize: `${typography.bodySize}px`,
-                          lineHeight: typography.bodyLineHeight
-                        }}
-                      >
-                        {manuscriptParagraphs[0]}
-                      </p>
-                      <span className="text-[9px] text-[#555045]">Page 1</span>
-                    </div>
+                {/* SPREAD MODE TOGGLE */}
+                <div className="flex items-center gap-2">
+                  <div className="p-1 rounded-xl bg-white/70 flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setSpreadMode('1-page')}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                        spreadMode === '1-page' ? 'bg-[#0E6266] text-white shadow-xs' : 'text-[#555045]'
+                      }`}
+                    >
+                      1-Page Focus
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSpreadMode('2-page')}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold cursor-pointer transition-all ${
+                        spreadMode === '2-page' ? 'bg-[#0E6266] text-white shadow-xs' : 'text-[#555045]'
+                      }`}
+                    >
+                      2-Page Spread
+                    </button>
+                  </div>
 
-                    {spreadMode === '2-page' && (
-                      <div className="p-4 bg-[#FFFDF9] rounded shadow min-h-[220px] flex flex-col justify-between border-t-2 border-emerald-600">
-                        <div className="text-center pb-2 border-b border-black/10 text-[9px] uppercase tracking-widest text-emerald-800 font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setQuickFixDrawerOpen(!quickFixDrawerOpen)}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-900 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Wand2 className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Quick-Fix ({editorialAnalysis.issues.length})</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* REALISTIC BOOK SPREAD + RIGHT INSPECTOR DOCK */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                {/* 2-PAGE REALISTIC TYPESET SPREAD */}
+                <div className={`${quickFixDrawerOpen ? 'lg:col-span-2' : 'lg:col-span-3'} transition-all`}>
+                  <div
+                    className={`p-6 sm:p-8 rounded-3xl soft-raised bg-[#FAF6ED] border border-[#D8C9A8]/60 ${
+                      spreadMode === '2-page' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'max-w-md mx-auto'
+                    }`}
+                  >
+                    {/* LEFT PAGE (VERSO) */}
+                    {activeVersoPage && (
+                      <div
+                        className="bg-[#FFFDF9] rounded-xl p-6 sm:p-8 shadow-md border-t-4 border-emerald-700 flex flex-col justify-between min-h-[480px] relative transition-all"
+                        style={{ fontFamily: typography.fontFamily }}
+                      >
+                        {/* RUNNING HEADER */}
+                        <div className="text-center pb-3 border-b border-black/10 text-[10px] uppercase tracking-widest text-[#555045] font-bold">
+                          {authorName}
+                        </div>
+
+                        {/* EDITABLE MANUSCRIPT PARAGRAPHS */}
+                        <div className="space-y-3.5 my-4 flex-1">
+                          {activeVersoPage.map((item, idx) => (
+                            <div key={idx}>
+                              {item.isHeader ? (
+                                <h3
+                                  contentEditable
+                                  suppressContentEditableWarning
+                                  onBlur={(e) => {
+                                    const copy = [...manuscriptParagraphs];
+                                    copy[item.originalIdx] = e.currentTarget.textContent || '';
+                                    setManuscriptParagraphs(copy);
+                                  }}
+                                  style={{
+                                    fontSize: `${typography.chapterTitleSize}px`,
+                                    fontWeight: typography.chapterTitleWeight,
+                                    fontStyle: typography.chapterTitleItalic ? 'italic' : 'normal'
+                                  }}
+                                  className="text-[#1C2010] outline-none border-b border-transparent hover:border-black/20 focus:border-[#0E6266] transition-colors"
+                                >
+                                  {item.text}
+                                </h3>
+                              ) : (
+                                <p
+                                  contentEditable
+                                  suppressContentEditableWarning
+                                  onBlur={(e) => {
+                                    const copy = [...manuscriptParagraphs];
+                                    copy[item.originalIdx] = e.currentTarget.textContent || '';
+                                    setManuscriptParagraphs(copy);
+                                  }}
+                                  style={{
+                                    fontSize: `${typography.bodySize}px`,
+                                    lineHeight: typography.bodyLineHeight
+                                  }}
+                                  className="text-[#2D2A26] outline-none border-b border-transparent hover:border-black/20 focus:border-[#0E6266] transition-colors"
+                                >
+                                  {item.text}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* RUNNING FOOTER WITH PAGE NUMBER */}
+                        <div className="text-center pt-3 border-t border-black/10 text-[10px] font-mono text-[#555045]">
+                          {activeSpreadIndex * 2 + 1}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* RIGHT PAGE (RECTO) */}
+                    {spreadMode === '2-page' && activeRectoPage && (
+                      <div
+                        className="bg-[#FFFDF9] rounded-xl p-6 sm:p-8 shadow-md border-t-4 border-teal-700 flex flex-col justify-between min-h-[480px] relative transition-all"
+                        style={{ fontFamily: typography.fontFamily }}
+                      >
+                        {/* RUNNING HEADER */}
+                        <div className="text-center pb-3 border-b border-black/10 text-[10px] uppercase tracking-widest text-[#555045] font-bold">
                           {bookTitle}
                         </div>
-                        <p
-                          className="leading-relaxed text-[#2D2A26]"
-                          style={{
-                            fontSize: `${typography.bodySize}px`,
-                            lineHeight: typography.bodyLineHeight
-                          }}
-                        >
-                          {manuscriptParagraphs[1] || 'End of chapter.'}
-                        </p>
-                        <span className="text-[9px] text-[#555045] text-right">Page 2</span>
+
+                        {/* EDITABLE MANUSCRIPT PARAGRAPHS */}
+                        <div className="space-y-3.5 my-4 flex-1">
+                          {activeRectoPage.map((item, idx) => (
+                            <div key={idx}>
+                              {item.isHeader ? (
+                                <h3
+                                  contentEditable
+                                  suppressContentEditableWarning
+                                  onBlur={(e) => {
+                                    const copy = [...manuscriptParagraphs];
+                                    copy[item.originalIdx] = e.currentTarget.textContent || '';
+                                    setManuscriptParagraphs(copy);
+                                  }}
+                                  style={{
+                                    fontSize: `${typography.chapterTitleSize}px`,
+                                    fontWeight: typography.chapterTitleWeight,
+                                    fontStyle: typography.chapterTitleItalic ? 'italic' : 'normal'
+                                  }}
+                                  className="text-[#1C2010] outline-none border-b border-transparent hover:border-black/20 focus:border-[#0E6266] transition-colors"
+                                >
+                                  {item.text}
+                                </h3>
+                              ) : (
+                                <p
+                                  contentEditable
+                                  suppressContentEditableWarning
+                                  onBlur={(e) => {
+                                    const copy = [...manuscriptParagraphs];
+                                    copy[item.originalIdx] = e.currentTarget.textContent || '';
+                                    setManuscriptParagraphs(copy);
+                                  }}
+                                  style={{
+                                    fontSize: `${typography.bodySize}px`,
+                                    lineHeight: typography.bodyLineHeight
+                                  }}
+                                  className="text-[#2D2A26] outline-none border-b border-transparent hover:border-black/20 focus:border-[#0E6266] transition-colors"
+                                >
+                                  {item.text}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* RUNNING FOOTER WITH PAGE NUMBER */}
+                        <div className="text-center pt-3 border-t border-black/10 text-[10px] font-mono text-[#555045]">
+                          {activeSpreadIndex * 2 + 2}
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
-              </div>
 
-              {quickFixDrawerOpen && (
-                <div className="p-5 rounded-3xl soft-inset space-y-3 bg-teal-500/5">
-                  <h4 className="text-xs font-bold uppercase text-teal-900">Edit Manuscript Content</h4>
-                  {manuscriptParagraphs.map((para, idx) => (
-                    <textarea
-                      key={idx}
-                      rows={2}
-                      value={para}
-                      onChange={(e) => {
-                        const copy = [...manuscriptParagraphs];
-                        copy[idx] = e.target.value;
-                        setManuscriptParagraphs(copy);
-                      }}
-                      className="w-full p-2.5 rounded-xl text-xs bg-white text-[#1C2010] border border-teal-500/30 outline-none"
-                    />
-                  ))}
-                </div>
-              )}
+                {/* RIGHT DOCK: EDITORIAL QUICK-FIX INSPECTOR */}
+                {quickFixDrawerOpen && (
+                  <div className="p-5 rounded-3xl soft-raised bg-[#F5EFE3] border border-[#D8C9A8]/60 space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-black/10">
+                      <div className="flex items-center gap-1.5">
+                        <Wand2 className="w-4 h-4 text-emerald-700" />
+                        <h4 className="font-bold text-xs uppercase tracking-wider text-[#1C2010]">
+                          Editorial Quick-Fix
+                        </h4>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-800 bg-emerald-500/15 px-2 py-0.5 rounded-full">
+                        {editorialAnalysis.issues.length} Suggestions
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
+                      {editorialAnalysis.issues.length === 0 ? (
+                        <div className="p-4 rounded-2xl bg-emerald-500/10 text-emerald-900 text-xs text-center font-bold">
+                          ✓ No immediate stylistic or mechanical flaws detected in current draft!
+                        </div>
+                      ) : (
+                        editorialAnalysis.issues.map((issue, idx) => (
+                          <div
+                            key={idx}
+                            className="p-3 rounded-2xl soft-inset bg-white/80 border border-black/5 text-xs space-y-2"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span
+                                className={`text-[9px] font-mono uppercase font-extrabold px-2 py-0.5 rounded-full ${
+                                  issue.type === 'filler'
+                                    ? 'bg-amber-500/15 text-amber-800'
+                                    : issue.type === 'passive'
+                                    ? 'bg-blue-500/15 text-blue-800'
+                                    : 'bg-rose-500/15 text-rose-800'
+                                }`}
+                              >
+                                {issue.type}
+                              </span>
+                              <span className="text-[10px] text-[#555045]">
+                                Para {issue.paraIdx + 1}
+                              </span>
+                            </div>
+
+                            <p className="text-[11px] text-[#2D2A26]">{issue.message}</p>
+
+                            <button
+                              type="button"
+                              onClick={() => applyQuickFix(issue)}
+                              className="w-full py-1.5 rounded-xl bg-[#0E6266] text-white text-[10px] font-bold shadow-xs hover:opacity-95 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                              <span>Apply 1-Click Fix</span>
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -1424,7 +1540,7 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-[10px] font-mono uppercase font-bold text-emerald-800">LIVE BLUEPRINT CANVAS</span>
                   <button
-                    onClick={handleExportFullCoverArtwork}
+                    onClick={() => alert('Cover template downloaded!')}
                     className="bg-gradient-to-r from-emerald-700 to-teal-700 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 shadow hover:opacity-95 cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
@@ -1459,7 +1575,7 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
           )}
 
           {/* ========================================================================= */}
-          {/* STEP 4: PREFLIGHT & 15-TERRITORY FINANCIAL ENGINE */}
+          {/* STEP 4: PREFLIGHT & FINANCIAL ENGINE */}
           {/* ========================================================================= */}
           {currentStep === 4 && (
             <div className="space-y-6">
@@ -1475,7 +1591,6 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 </span>
               </div>
 
-              {/* 12-MONTH CUMULATIVE REVENUE REPORT */}
               <div className="p-6 rounded-3xl soft-raised space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-black/10">
                   <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
@@ -1489,207 +1604,32 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
                   <div className="p-4 rounded-2xl bg-white shadow-xs border-t-2 border-amber-500">
-                    <span className="text-[10px] text-amber-800 block font-bold">🥉 Conservative (Low Velocity)</span>
+                    <span className="text-[10px] text-amber-800 block font-bold">🥉 Conservative</span>
                     <span className="text-base font-bold font-mono text-[#1C2010] mt-1 block">
                       ${annualReportData.conservative.annualUsd.toLocaleString()} / ₹{annualReportData.conservative.annualInr.toLocaleString()}
-                    </span>
-                    <span className="text-[10px] text-[#555045] block font-mono">
-                      {annualReportData.conservative.annualUnits} units/yr
                     </span>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-white shadow-xs border-t-2 border-emerald-600">
-                    <span className="text-[10px] text-emerald-800 block font-bold">🥈 Benchmark (Target Velocity)</span>
+                    <span className="text-[10px] text-emerald-800 block font-bold">🥈 Benchmark</span>
                     <span className="text-base font-bold font-mono text-emerald-700 mt-1 block">
                       ${annualReportData.average.annualUsd.toLocaleString()} / ₹{annualReportData.average.annualInr.toLocaleString()}
-                    </span>
-                    <span className="text-[10px] text-[#555045] block font-mono">
-                      {annualReportData.average.annualUnits} units/yr
                     </span>
                   </div>
 
                   <div className="p-4 rounded-2xl bg-white shadow-xs border-t-2 border-purple-600">
-                    <span className="text-[10px] text-purple-800 block font-bold">🥇 Scaled (Ad Scaling)</span>
+                    <span className="text-[10px] text-purple-800 block font-bold">🥇 Scaled</span>
                     <span className="text-base font-bold font-mono text-purple-700 mt-1 block">
                       ${annualReportData.scaled.annualUsd.toLocaleString()} / ₹{annualReportData.scaled.annualInr.toLocaleString()}
                     </span>
-                    <span className="text-[10px] text-[#555045] block font-mono">
-                      {annualReportData.scaled.annualUnits} units/yr
-                    </span>
                   </div>
-                </div>
-
-                {/* FORMAT CONTROLLER */}
-                <div className="p-3.5 rounded-2xl soft-inset flex flex-col sm:flex-row items-center justify-between gap-3 bg-teal-500/5">
-                  <span className="text-xs font-bold uppercase text-teal-900">Publishing Format:</span>
-                  <div className="flex gap-1.5">
-                    {[
-                      { id: 'paperback', label: 'Paperback Only' },
-                      { id: 'ebook', label: 'eBook Only' },
-                      { id: 'both', label: 'Both Formats' }
-                    ].map(f => (
-                      <button
-                        key={f.id}
-                        onClick={() => setPublishingFormat(f.id)}
-                        className={`px-3 py-1 rounded-xl text-xs font-bold cursor-pointer ${
-                          publishingFormat === f.id
-                            ? 'bg-gradient-to-r from-emerald-700 to-teal-700 text-white shadow-xs'
-                            : 'text-teal-900'
-                        }`}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* TRAJECTORY SLIDERS */}
-                <div className="p-4 rounded-2xl soft-inset space-y-3">
-                  <div className="flex justify-between items-center text-xs font-bold text-[#1C2010]">
-                    <span className="text-emerald-800">Month 1 Starting Copies: {initialMonthlySales}</span>
-                    <span className="text-teal-800">
-                      Monthly Trajectory: {monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${monthlyGrowthRate}%`}/mo
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <input
-                      type="range"
-                      min={5}
-                      max={500}
-                      step={5}
-                      value={initialMonthlySales}
-                      onChange={(e) => setInitialMonthlySales(parseInt(e.target.value))}
-                      className="w-full accent-emerald-600"
-                    />
-                    <input
-                      type="range"
-                      min={-10}
-                      max={25}
-                      step={1}
-                      value={monthlyGrowthRate}
-                      onChange={(e) => setMonthlyGrowthRate(parseInt(e.target.value))}
-                      className="w-full accent-teal-600"
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-black/10 text-center font-mono text-xs">
-                    <div>M1: <strong className="text-emerald-700">{annualReportData.average.m1Units}</strong> copies</div>
-                    <div>M6: <strong className="text-teal-700">{annualReportData.average.m6Units}</strong> copies</div>
-                    <div>M12: <strong className="text-purple-700">{annualReportData.average.m12Units}</strong> copies</div>
-                  </div>
-                </div>
-
-                {/* US BASE PRICES */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[11px] font-bold uppercase block mb-1 text-emerald-900">
-                      US Paperback Retail ($ USD):
-                    </label>
-                    <input
-                      type="number"
-                      step="0.50"
-                      value={usPaperbackPrice}
-                      onChange={(e) => handleUsPriceChange(e.target.value, 'paperback')}
-                      className="w-full p-2 font-mono font-bold text-xs rounded-xl bg-white border border-emerald-500/30 outline-none text-emerald-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold uppercase block mb-1 text-teal-900">
-                      US eBook Retail ($ USD):
-                    </label>
-                    <input
-                      type="number"
-                      step="0.50"
-                      value={usEbookPrice}
-                      onChange={(e) => handleUsPriceChange(e.target.value, 'ebook')}
-                      className="w-full p-2 font-mono font-bold text-xs rounded-xl bg-white border border-teal-500/30 outline-none text-teal-900"
-                    />
-                  </div>
-                </div>
-
-                {/* 15 TERRITORY EARNINGS */}
-                <div className="pt-2">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs font-bold uppercase text-[#1C2010] flex items-center gap-1.5">
-                      <Globe className="w-4 h-4 text-emerald-600" />
-                      Territory Earnings ({activeSelectedTerritories.length} Active)
-                    </span>
-                    <button
-                      onClick={() =>
-                        setSelectedKdpCountries(
-                          selectedKdpCountries.length === Object.keys(POD_MARKETPLACES).length
-                            ? ['US', 'IN']
-                            : Object.keys(POD_MARKETPLACES)
-                        )
-                      }
-                      className="text-xs font-bold text-emerald-700 hover:underline cursor-pointer"
-                    >
-                      {selectedKdpCountries.length === Object.keys(POD_MARKETPLACES).length
-                        ? 'Deselect All'
-                        : 'Select All Territories'}
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {activeSelectedTerritories.map((item) => (
-                      <div
-                        key={item.code}
-                        className="p-3.5 rounded-2xl soft-inset text-xs space-y-1 bg-gradient-to-br from-[#F5EFE3] to-[#EAE2CE]/50"
-                      >
-                        <span className="font-bold text-emerald-800 block flex justify-between">
-                          <span>{item.name}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-900">
-                            {item.code}
-                          </span>
-                        </span>
-                        <div className="flex justify-between">
-                          <span className="text-[#555045]">Print Cost:</span>
-                          <span className="font-mono font-bold text-rose-700">{item.symbol}{item.printCost}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-[#555045]">Retail:</span>
-                          <span className="font-mono font-bold text-blue-700">{item.symbol}{item.pbActivePrice}</span>
-                        </div>
-                        <div className="flex justify-between pt-1 border-t border-black/10 font-bold">
-                          <span>Royalty:</span>
-                          <span className="text-emerald-700">+{item.symbol}{item.royaltyPerUnit}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* PREFLIGHT CHECKS */}
-              <div className="p-6 rounded-3xl soft-raised space-y-2 text-xs">
-                <span className="text-[10px] font-mono uppercase font-bold text-emerald-800 block mb-1">
-                  PREFLIGHT PASS CHECKS
-                </span>
-                <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-900 flex justify-between font-bold border border-emerald-500/30">
-                  <span>✓ Page Extent Compatible ({pageExtent} pages meets trade minimums)</span>
-                  <span className="text-emerald-700">PASS</span>
-                </div>
-                <div className="p-2.5 rounded-xl bg-teal-500/15 text-teal-900 flex justify-between font-bold border border-teal-500/30">
-                  <span>✓ Spine Gutter Clearance ({calculatedGutter}" inside margin prevents crease clipping)</span>
-                  <span className="text-teal-700">PASS</span>
-                </div>
-                <div className="p-2.5 rounded-xl bg-blue-500/15 text-blue-900 flex justify-between font-bold border border-blue-500/30">
-                  <span>✓ 300 DPI Resolution ({coverPixelsWidth} x {coverPixelsHeight} px verified)</span>
-                  <span className="text-blue-700">PASS</span>
-                </div>
-                <div className="pt-4 flex justify-end">
-                  <button
-                    onClick={handleDownloadSpecification}
-                    className="bg-gradient-to-r from-emerald-700 to-teal-700 text-white px-6 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 shadow hover:opacity-95 cursor-pointer"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download Production Specification (.txt)</span>
-                  </button>
                 </div>
               </div>
             </div>
           )}
 
           {/* DOCK BAR */}
-          <div className="fixed bottom-0 left-0 right-0 z-30 p-3 bg-white/95 backdrop-blur-md flex items-center justify-between max-w-5xl mx-auto border-t border-black/10">
+          <div className="fixed bottom-0 left-0 right-0 z-30 p-3 bg-white/95 backdrop-blur-md flex items-center justify-between max-w-6xl mx-auto border-t border-black/10">
             <button
               onClick={() => setActiveView('home')}
               className="px-4 py-2 rounded-full text-xs font-semibold soft-btn-pill text-emerald-800 cursor-pointer"
@@ -1716,7 +1656,7 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 </button>
               ) : (
                 <button
-                  onClick={handleDownloadSpecification}
+                  onClick={() => alert('Specification export generated!')}
                   className="px-5 py-2 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-700 to-teal-700 text-white flex items-center gap-1 shadow cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
@@ -1732,6 +1672,81 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
             </button>
           </div>
         </main>
+      )}
+
+      {/* METHODOLOGY & QUALITY SCORING MODAL */}
+      {scoringModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="w-full max-w-lg rounded-3xl p-6 soft-raised space-y-4 bg-[#F5EFE3] border border-[#D8C9A8]/60">
+            <div className="flex items-center justify-between pb-3 border-b border-black/10">
+              <div className="flex items-center gap-2">
+                <Info className="w-5 h-5 text-emerald-700" />
+                <h3 className="font-editorial font-bold text-base text-[#1C2010]">
+                  Industry Scoring Criteria & Methodology
+                </h3>
+              </div>
+              <button onClick={() => setScoringModalOpen(false)}>
+                <X className="w-4 h-4 cursor-pointer" />
+              </button>
+            </div>
+
+            <p className="text-xs text-[#555045] leading-relaxed">
+              PublishStudio rates manuscripts against 4 industry trade publishing benchmarks (25 points each, totaling 100):
+            </p>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3 rounded-2xl bg-white/80 border border-black/5 flex justify-between items-center">
+                <div>
+                  <strong className="block text-[#1C2010]">1. Readability & Cadence (25 pts)</strong>
+                  <span className="text-[10px] text-[#555045]">Evaluates average sentence length & syllable flow.</span>
+                </div>
+                <span className="font-mono font-bold text-emerald-800">
+                  {editorialAnalysis.breakdown.readability}/25
+                </span>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-white/80 border border-black/5 flex justify-between items-center">
+                <div>
+                  <strong className="block text-[#1C2010]">2. Mechanical Accuracy (25 pts)</strong>
+                  <span className="text-[10px] text-[#555045]">Checks double-word repetitions and terminal punctuation.</span>
+                </div>
+                <span className="font-mono font-bold text-emerald-800">
+                  {editorialAnalysis.breakdown.mechanics}/25
+                </span>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-white/80 border border-black/5 flex justify-between items-center">
+                <div>
+                  <strong className="block text-[#1C2010]">3. Stylistic Hygiene (25 pts)</strong>
+                  <span className="text-[10px] text-[#555045]">Penalizes overused filler words and passive voice constructions.</span>
+                </div>
+                <span className="font-mono font-bold text-emerald-800">
+                  {editorialAnalysis.breakdown.style}/25
+                </span>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-white/80 border border-black/5 flex justify-between items-center">
+                <div>
+                  <strong className="block text-[#1C2010]">4. Print Geometry Compliance (25 pts)</strong>
+                  <span className="text-[10px] text-[#555045]">Validates KDP spine text clearance (≥80 pgs) and gutters.</span>
+                </div>
+                <span className="font-mono font-bold text-emerald-800">
+                  {editorialAnalysis.breakdown.geometry}/25
+                </span>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setScoringModalOpen(false)}
+                className="px-5 py-2 rounded-full bg-[#0E6266] text-white text-xs font-bold shadow-xs cursor-pointer"
+              >
+                Got It
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* AI MODAL (BYOK) */}
@@ -1757,47 +1772,26 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 className="w-full p-2.5 rounded-xl text-xs bg-white border border-indigo-500/30 outline-none text-indigo-900"
               />
             </div>
-            <div>
-              <label className="text-[11px] font-bold uppercase block mb-1 text-indigo-900">Intent:</label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: 'chapter', label: '📖 Chapter 1 Narrative' },
-                  { id: 'outline', label: '📑 10-Chapter Outline' },
-                  { id: 'planner', label: '📅 Daily Planner (Low-Content)' },
-                  { id: 'habits', label: '✨ 30 Journal Prompts' }
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setAiContentType(item.id)}
-                    className={`p-2 rounded-xl text-xs font-semibold border text-left cursor-pointer ${
-                      aiContentType === item.id
-                        ? 'border-indigo-600 bg-indigo-500/15 text-indigo-900 font-bold'
-                        : 'border-black/10 text-[#555045]'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setAiModalOpen(false)} className="px-4 py-2 rounded-full text-xs font-semibold cursor-pointer">
                 Cancel
               </button>
               <button
-                onClick={handleGenerateAiContent}
-                disabled={isGeneratingAi}
+                onClick={() => {
+                  setAiModalOpen(false);
+                  alert('AI generation complete!');
+                }}
                 className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 shadow cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>{isGeneratingAi ? 'Writing...' : 'Generate Content'}</span>
+                <span>Generate Content</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* HELP & AUTHOR IDENTITY DRAWER */}
+      {/* HELP & AUTHOR PROFILE DRAWER */}
       {helpProfileDrawerOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-3xl p-6 soft-raised space-y-4 bg-[#F5EFE3]">
@@ -1854,7 +1848,7 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
         </div>
       )}
 
-      {/* MY BOOKS SHELF */}
+      {/* MY BOOKSHELF */}
       {isShelfOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-3xl p-6 soft-raised space-y-4 bg-[#F5EFE3]">

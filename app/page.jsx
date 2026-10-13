@@ -1,10 +1,10 @@
 'use client';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Book, HelpCircle, Sun, Moon, Sparkles, Download, 
-  ArrowRight, ArrowLeft, CheckCircle2, 
-  FolderOpen, Trash2, X, Globe, Upload, CheckSquare, Square,
-  Cpu, Calendar, ChevronRight, Send, Check
+  Book, HelpCircle, Sparkles, Download, 
+  ArrowRight, ArrowLeft, 
+  FolderOpen, X, Globe, 
+  Cpu, Calendar, ChevronRight
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import { 
@@ -18,10 +18,10 @@ import {
    MASTER DATA & 15-TERRITORY POD MARKETPLACE MATRIX
    -------------------------------------------------------------------------- */
 const ARCHETYPES = [
-  { id: 'fiction', name: 'Fiction & Novel', defaultTrim: '5.5x8.5', paper: 'cream', desc: '5.5"x8.5", Cream paper' },
-  { id: 'nonfiction', name: 'Non-Fiction & Memoir', defaultTrim: '6x9', paper: 'white', desc: '6"x9", White paper' },
-  { id: 'workbook', name: 'Workbook & Training Manual', defaultTrim: '8.5x11', paper: 'white', desc: '8.5"x11", White paper' },
-  { id: 'custom', name: 'Custom Specification', defaultTrim: '6x9', paper: 'white', desc: '6"x9", White paper' }
+  { id: 'fiction', name: 'Fiction & Novel', defaultTrim: '5.5x8.5', paper: 'cream', desc: '5.5"x8.5", Cream paper', colorTag: 'bg-emerald-500/10 text-emerald-800 border-emerald-500/30' },
+  { id: 'nonfiction', name: 'Non-Fiction & Memoir', defaultTrim: '6x9', paper: 'white', desc: '6"x9", White paper', colorTag: 'bg-blue-500/10 text-blue-800 border-blue-500/30' },
+  { id: 'workbook', name: 'Workbook & Training Manual', defaultTrim: '8.5x11', paper: 'white', desc: '8.5"x11", White paper', colorTag: 'bg-amber-500/10 text-amber-800 border-amber-500/30' },
+  { id: 'custom', name: 'Custom Specification', defaultTrim: '6x9', paper: 'white', desc: '6"x9", White paper', colorTag: 'bg-purple-500/10 text-purple-800 border-purple-500/30' }
 ];
 
 const TRIM_OPTIONS = [
@@ -66,7 +66,6 @@ export default function PublishStudioApp() {
   /* ROUTING & ACTIVE VIEW */
   const [activeView, setActiveView] = useState('home'); // 'home' | 'studio'
   const [currentStep, setCurrentStep] = useState(1);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   /* PROJECT CONFIGURATION */
   const [projectId, setProjectId] = useState('proj_default');
   const [bookTitle, setBookTitle] = useState('The Memory Chef');
@@ -353,58 +352,56 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
   };
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark-canvas' : 'bg-[#F5EFE3] text-[#1C2010]'}`}>
+    <div className="min-h-screen bg-[#F5EFE3] text-[#1C2010]">
       
       {/* HEADER DOCK */}
       <header className="sticky top-0 z-40 w-full backdrop-blur-md border-b border-[#D8C9A8] bg-[#F5EFE3]/95">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div onClick={() => setActiveView('home')} className="flex items-center gap-3 cursor-pointer">
-            <div className="w-10 h-10 rounded-2xl bg-[#4F5B2A] text-white flex items-center justify-center shadow-md">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-md">
               <Book className="w-5 h-5" />
             </div>
-            <div>
-              <span className="font-editorial font-bold text-base text-[#1C2010]">PUBLISHSTUDIO</span>
-              <p className="text-[10px] text-[#4F5B2A] font-semibold">Self Publishing Supporting Software</p>
+            <div className="flex items-center gap-2">
+              <div>
+                <span className="font-editorial font-bold text-base text-[#1C2010]">PUBLISHSTUDIO</span>
+                <p className="text-[10px] text-emerald-700 font-bold">Self Publishing Supporting Software</p>
+              </div>
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-600 via-red-600 to-amber-600 text-white shadow-xs">
+                Book OS
+              </span>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setActiveView('home')}
-              className="px-3 py-1.5 rounded-full text-xs font-bold soft-btn-pill text-[#4F5B2A] cursor-pointer"
+              className="px-3 py-1.5 rounded-full text-xs font-bold soft-btn-pill text-emerald-800 cursor-pointer"
             >
               Home
             </button>
 
             <button
               onClick={() => setAiModalOpen(true)}
-              className="px-3 py-1.5 rounded-full text-xs font-bold soft-btn-pill text-[#4F5B2A] flex items-center gap-1.5 cursor-pointer"
+              className="px-3 py-1.5 rounded-full text-xs font-bold soft-btn-pill text-indigo-700 flex items-center gap-1.5 cursor-pointer"
             >
-              <Cpu className="w-4 h-4 text-[#4F5B2A]" />
+              <Cpu className="w-4 h-4 text-indigo-600" />
               <span className="hidden sm:inline">AI Studio</span>
             </button>
 
             <button
               onClick={() => setIsShelfOpen(true)}
-              className="p-2 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold soft-btn-pill flex items-center gap-1.5 cursor-pointer"
+              className="p-2 sm:px-3 sm:py-1.5 rounded-full text-xs font-semibold soft-btn-pill text-amber-800 flex items-center gap-1.5 cursor-pointer"
             >
-              <FolderOpen className="w-4 h-4 text-[#4F5B2A]" />
+              <FolderOpen className="w-4 h-4 text-amber-600" />
               <span className="hidden sm:inline">My Books</span>
             </button>
 
             <button
               onClick={() => setHelpProfileDrawerOpen(true)}
-              className="px-3 py-1.5 rounded-full text-xs font-bold bg-[#4F5B2A] text-white flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-teal-700 to-emerald-700 text-white flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
               <HelpCircle className="w-3.5 h-3.5" />
               <span>Help & Profile</span>
-            </button>
-
-            <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-2 rounded-full soft-btn-pill cursor-pointer"
-            >
-              {isDarkMode ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-[#1C2010]" />}
             </button>
           </div>
         </div>
@@ -416,45 +413,61 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
           
           {/* HERO SECTION */}
           <div className="text-center space-y-4 max-w-3xl mx-auto">
-            <span className="text-[11px] font-mono uppercase tracking-widest font-bold text-[#4F5B2A] bg-[#E8DFC8] px-3.5 py-1.5 rounded-full">
+            <span className="text-[11px] font-mono uppercase tracking-widest font-bold text-teal-800 bg-teal-500/15 border border-teal-500/30 px-3.5 py-1.5 rounded-full">
               Self Publishing Supporting Software
             </span>
             <h1 className="font-editorial text-4xl sm:text-6xl font-extrabold text-[#1C2010] leading-tight">
-              Focus More on Writing, Less on Formatting!
+              Focus More on Writing, <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-700 to-teal-600">Less on Formatting!</span>
             </h1>
-            <p className="text-base sm:text-lg text-[#4F5B2A] max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg text-[#555045] max-w-2xl mx-auto leading-relaxed">
               PublishStudio eliminates printing rejections across Self Publishing Platforms. Calculate binding gutters, full-wrap spine bulks, safe zones, and multi-country royalties automatically.
             </p>
 
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
                 onClick={() => { setActiveView('studio'); setCurrentStep(1); }}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-full soft-btn-primary text-xs font-bold flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+                className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-gradient-to-r from-emerald-700 to-teal-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-lg hover:opacity-95 transition-all cursor-pointer"
               >
                 <span>Launch Book Production Studio</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
               <button
                 onClick={() => { setActiveView('studio'); setCurrentStep(2); }}
-                className="w-full sm:w-auto px-7 py-3.5 rounded-full soft-btn-pill text-xs font-bold text-[#1C2010] cursor-pointer"
+                className="w-full sm:w-auto px-7 py-3.5 rounded-full soft-btn-pill text-xs font-bold text-amber-900 border border-amber-500/30 bg-amber-500/10 cursor-pointer"
               >
                 Explore Demo Proof
               </button>
             </div>
           </div>
 
-          {/* FORMAT PREVIEW CARDS */}
+          {/* FORMAT PREVIEW CARDS (WITH LIVE LINKS) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="p-8 rounded-3xl soft-raised space-y-3 bg-[#F5EFE3]">
-              <div className="w-10 h-10 rounded-2xl bg-[#4F5B2A] text-white flex items-center justify-center font-bold text-sm shadow-xs">A</div>
+            <div 
+              onClick={() => { setSelectedArchetype('fiction'); setActiveView('studio'); setCurrentStep(2); }}
+              className="p-8 rounded-3xl soft-raised space-y-3 bg-[#F5EFE3] border-t-4 border-emerald-600 cursor-pointer hover:shadow-xl transition-all group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">A</div>
+                <span className="text-xs font-bold text-emerald-700 group-hover:underline flex items-center gap-1">
+                  Open Typeset Proof &rarr;
+                </span>
+              </div>
               <h3 className="font-editorial text-xl font-bold text-[#1C2010]">Text-Rich Manuscripts</h3>
-              <p className="text-xs sm:text-sm text-[#4F5B2A] leading-relaxed">Novels, memoirs, non-fiction, and poetry with automated gutter calculations and running headers optimized for trade standards.</p>
+              <p className="text-xs sm:text-sm text-[#555045] leading-relaxed">Novels, memoirs, non-fiction, and poetry with automated gutter calculations and running headers optimized for trade standards.</p>
             </div>
 
-            <div className="p-8 rounded-3xl soft-raised space-y-3 bg-[#F5EFE3]">
-              <div className="w-10 h-10 rounded-2xl bg-[#B8892D] text-white flex items-center justify-center font-bold text-sm shadow-xs">B</div>
+            <div 
+              onClick={() => { setSelectedArchetype('workbook'); setActiveView('studio'); setCurrentStep(2); }}
+              className="p-8 rounded-3xl soft-raised space-y-3 bg-[#F5EFE3] border-t-4 border-amber-600 cursor-pointer hover:shadow-xl transition-all group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="w-10 h-10 rounded-2xl bg-amber-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">B</div>
+                <span className="text-xs font-bold text-amber-800 group-hover:underline flex items-center gap-1">
+                  Open Planner Proof &rarr;
+                </span>
+              </div>
               <h3 className="font-editorial text-xl font-bold text-[#1C2010]">Low-Content Creations</h3>
-              <p className="text-xs sm:text-sm text-[#4F5B2A] leading-relaxed">Planners, journals, and daily trackers with 300 DPI preservation and barcode exclusion zones tailored for Print on Demand (PoD).</p>
+              <p className="text-xs sm:text-sm text-[#555045] leading-relaxed">Planners, journals, and daily trackers with 300 DPI preservation and barcode exclusion zones tailored for Print on Demand (PoD).</p>
             </div>
           </div>
 
@@ -462,46 +475,53 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
           <div className="space-y-8 pt-4">
             <div className="text-center space-y-2 max-w-xl mx-auto">
               <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[#1C2010]">Why Independent Authors Choose Us</h2>
-              <p className="text-xs sm:text-sm text-[#4F5B2A]">Built for creators who value speed, absolute privacy, and flawless print compliance.</p>
+              <p className="text-xs sm:text-sm text-[#555045]">Built for creators who value speed, absolute privacy, and flawless print compliance.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               
-              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3]">
+              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3] hover:border-emerald-500/40 transition-colors">
+                <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-900">SPEED & FLOW</span>
                 <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">1. Clean Formatting in Seconds</h4>
-                <p className="text-xs text-[#4F5B2A] leading-relaxed">Transform raw text into structured layouts and export your publication-ready files with one click.</p>
+                <p className="text-xs text-[#555045] leading-relaxed">Transform raw text into structured layouts and export your publication-ready files with one click.</p>
               </div>
 
-              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3]">
+              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3] hover:border-blue-500/40 transition-colors">
+                <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-900">TOTAL SECURITY</span>
                 <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">2. 100% Client-Side Privacy</h4>
-                <p className="text-xs text-[#4F5B2A] leading-relaxed">Your data stays with you. We do not save or store your manuscript files on external servers.</p>
+                <p className="text-xs text-[#555045] leading-relaxed">Your data stays with you. We do not save or store your manuscript files on external servers.</p>
               </div>
 
-              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3]">
+              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3] hover:border-purple-500/40 transition-colors">
+                <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-900">LOCAL CACHE</span>
                 <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">3. Smart Local History</h4>
-                <p className="text-xs text-[#4F5B2A] leading-relaxed">Automatically remembers your recent book project history locally so you never lose your flow.</p>
+                <p className="text-xs text-[#555045] leading-relaxed">Automatically remembers your recent book project history locally so you never lose your flow.</p>
               </div>
 
-              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3]">
+              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3] hover:border-amber-500/40 transition-colors">
+                <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-900">GENRE PRECISION</span>
                 <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">4. Category Precision</h4>
-                <p className="text-xs text-[#4F5B2A] leading-relaxed">Calculates precise specifications tailored to your specific book genre and trim selection.</p>
+                <p className="text-xs text-[#555045] leading-relaxed">Calculates precise specifications tailored to your specific book genre and trim selection.</p>
               </div>
 
-              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3]">
+              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3] hover:border-rose-500/40 transition-colors">
+                <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-900">LIVE EDITING</span>
                 <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">5. Live Preview & Quick-Fix</h4>
-                <p className="text-xs text-[#4F5B2A] leading-relaxed">Inspect formatted pages live and use built-in Quick-Fix tools to correct text issues instantly.</p>
+                <p className="text-xs text-[#555045] leading-relaxed">Inspect formatted pages live and use built-in Quick-Fix tools to correct text issues instantly.</p>
               </div>
 
-              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3]">
+              <div className="p-6 rounded-3xl soft-raised space-y-2 bg-[#F5EFE3] hover:border-teal-500/40 transition-colors">
+                <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded bg-teal-500/20 text-teal-900">COVER SPECS</span>
                 <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">6. Cover & Margin Guidelines</h4>
-                <p className="text-xs text-[#4F5B2A] leading-relaxed">Generate complete cover wrap specs, run live checks, and download templates for free.</p>
+                <p className="text-xs text-[#555045] leading-relaxed">Generate complete cover wrap specs, run live checks, and download templates for free.</p>
               </div>
 
             </div>
 
-            <div className="p-8 rounded-3xl soft-raised bg-[#F5EFE3] space-y-2">
-              <h4 className="font-bold text-sm text-[#1C2010]">7. Multi-Market Revenue Alignment & Much More</h4>
-              <p className="text-xs sm:text-sm text-[#4F5B2A] leading-relaxed">
+            <div className="p-8 rounded-3xl soft-raised bg-gradient-to-br from-[#F5EFE3] to-[#EAE2CE] space-y-2 border border-emerald-500/20">
+              <span className="inline-block text-[10px] font-bold px-2.5 py-0.5 rounded bg-emerald-700 text-white shadow-xs">GLOBAL ECOSYSTEM</span>
+              <h4 className="font-bold text-sm text-[#1C2010] mt-1">7. Multi-Market Revenue Alignment & Much More</h4>
+              <p className="text-xs sm:text-sm text-[#555045] leading-relaxed">
                 Guide your pricing strategy with automated cost and revenue estimations across international currencies and global Print on Demand (PoD) markets. PublishStudio is built as an evolving Book OS with continuous updates to streamline your publishing journey.
               </p>
             </div>
@@ -532,13 +552,13 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                       onClick={() => setCurrentStep(s.step)}
                       className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-1.5 rounded-full text-xs font-semibold cursor-pointer ${
                         isActive
-                          ? 'bg-[#4F5B2A] text-white font-bold shadow-md'
+                          ? 'bg-gradient-to-r from-emerald-700 to-teal-700 text-white font-bold shadow-md'
                           : isPassed
-                            ? 'text-[#4F5B2A] font-bold'
-                            : 'text-[#4F5B2A]/60'
+                            ? 'text-emerald-800 font-bold bg-emerald-500/10'
+                            : 'text-[#555045]/60'
                       }`}
                     >
-                      <span className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center ${isActive ? 'bg-white text-[#4F5B2A] font-bold' : 'bg-black/10'}`}>
+                      <span className={`w-4 h-4 rounded-full text-[10px] flex items-center justify-center ${isActive ? 'bg-white text-emerald-800 font-bold' : 'bg-black/10'}`}>
                         {isPassed ? '✓' : s.step}
                       </span>
                       <span className="hidden sm:inline">{s.label}</span>
@@ -557,7 +577,7 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[#1C2010]">
                   Step 1: Specification & Manuscript Setup
                 </h2>
-                <p className="text-xs text-[#4F5B2A] mt-1">Author Profile: <strong>{authorName}</strong></p>
+                <p className="text-xs text-[#555045] mt-1">Author Profile: <strong className="text-emerald-800">{authorName}</strong></p>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -565,10 +585,11 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                   <button
                     key={arch.id}
                     onClick={() => { setSelectedArchetype(arch.id); setTrimSize(arch.defaultTrim); setPaperType(arch.paper); }}
-                    className={`p-4 rounded-2xl text-center soft-raised cursor-pointer ${selectedArchetype === arch.id ? 'ring-2 ring-[#4F5B2A]' : ''}`}
+                    className={`p-4 rounded-2xl text-center soft-raised cursor-pointer border ${selectedArchetype === arch.id ? 'border-emerald-600 bg-emerald-500/10 ring-2 ring-emerald-500/30' : 'border-transparent'}`}
                   >
+                    <span className={`inline-block text-[10px] px-2 py-0.5 rounded font-bold mb-2 ${arch.colorTag}`}>{arch.id.toUpperCase()}</span>
                     <h4 className="font-bold text-xs sm:text-sm text-[#1C2010]">{arch.name}</h4>
-                    <p className="text-[10px] text-[#4F5B2A] mt-1">{arch.desc}</p>
+                    <p className="text-[10px] text-[#555045] mt-1">{arch.desc}</p>
                   </button>
                 ))}
               </div>
@@ -591,23 +612,23 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-xs font-bold uppercase text-[#1C2010]">Page Extent</span>
-                    <span className="text-xs font-mono font-bold text-[#4F5B2A]">{pageExtent} Pages</span>
+                    <span className="text-xs font-mono font-bold text-emerald-700">{pageExtent} Pages</span>
                   </div>
-                  <input type="range" min={24} max={600} value={pageExtent} onChange={(e) => setPageExtent(parseInt(e.target.value))} className="w-full accent-[#4F5B2A]" />
+                  <input type="range" min={24} max={600} value={pageExtent} onChange={(e) => setPageExtent(parseInt(e.target.value))} className="w-full accent-emerald-600" />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-black/10">
-                  <div className="p-3 rounded-2xl soft-inset text-center">
-                    <span className="text-xs font-bold block">Spine Gutter: {calculatedGutter}"</span>
-                    <span className="text-[10px] text-[#4F5B2A]">Prevents Crease Loss</span>
+                  <div className="p-3 rounded-2xl soft-inset text-center bg-emerald-500/5">
+                    <span className="text-xs font-bold block text-emerald-900">Spine Gutter: {calculatedGutter}"</span>
+                    <span className="text-[10px] text-emerald-700">Prevents Crease Loss</span>
                   </div>
-                  <div className="p-3 rounded-2xl soft-inset text-center">
-                    <span className="text-xs font-bold block">Outside Margin: 0.500"</span>
-                    <span className="text-[10px] text-[#4F5B2A]">Thumb Clearance</span>
+                  <div className="p-3 rounded-2xl soft-inset text-center bg-blue-500/5">
+                    <span className="text-xs font-bold block text-blue-900">Outside Margin: 0.500"</span>
+                    <span className="text-[10px] text-blue-700">Thumb Clearance</span>
                   </div>
-                  <div className="p-3 rounded-2xl soft-inset text-center">
-                    <span className="text-xs font-bold block">Spine Bulk: {spineWidth}"</span>
-                    <span className="text-[10px] text-[#4F5B2A]">Physical Depth</span>
+                  <div className="p-3 rounded-2xl soft-inset text-center bg-amber-500/5">
+                    <span className="text-xs font-bold block text-amber-900">Spine Bulk: {spineWidth}"</span>
+                    <span className="text-[10px] text-amber-700">Physical Depth</span>
                   </div>
                 </div>
               </div>
@@ -620,11 +641,11 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[#1C2010]">Step 2: Interior Layout & Typeset Proof</h2>
-                  <p className="text-xs text-[#4F5B2A] mt-1">Author Profile: <strong>{authorName}</strong></p>
+                  <p className="text-xs text-[#555045] mt-1">Author Profile: <strong className="text-emerald-800">{authorName}</strong></p>
                 </div>
                 <div className="flex gap-1 p-1 rounded-full soft-inset">
-                  <button onClick={() => setSpreadMode('1-page')} className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer ${spreadMode === '1-page' ? 'bg-[#4F5B2A] text-white' : 'text-[#4F5B2A]'}`}>1-Page View</button>
-                  <button onClick={() => setSpreadMode('2-page')} className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer ${spreadMode === '2-page' ? 'bg-[#4F5B2A] text-white' : 'text-[#4F5B2A]'}`}>2-Page Spread</button>
+                  <button onClick={() => setSpreadMode('1-page')} className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer ${spreadMode === '1-page' ? 'bg-emerald-700 text-white' : 'text-[#555045]'}`}>1-Page View</button>
+                  <button onClick={() => setSpreadMode('2-page')} className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer ${spreadMode === '2-page' ? 'bg-emerald-700 text-white' : 'text-[#555045]'}`}>2-Page Spread</button>
                 </div>
               </div>
 
@@ -638,24 +659,24 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                     <label className="text-xs font-bold uppercase block mb-1 text-[#1C2010]">Author Name</label>
                     <input type="text" value={authorName} onChange={(e) => setAuthorName(e.target.value)} className="w-full p-2.5 rounded-xl text-xs soft-inset outline-none text-[#1C2010]" />
                   </div>
-                  <button onClick={() => setQuickFixDrawerOpen(!quickFixDrawerOpen)} className="w-full py-2 rounded-full soft-btn-pill text-xs font-bold cursor-pointer">
+                  <button onClick={() => setQuickFixDrawerOpen(!quickFixDrawerOpen)} className="w-full py-2 rounded-full soft-btn-pill text-xs font-bold text-teal-800 bg-teal-500/10 cursor-pointer">
                     {quickFixDrawerOpen ? 'Close Text Editor' : 'Quick-Fix Text'}
                   </button>
                 </div>
 
                 <div className="md:col-span-2 p-6 rounded-3xl soft-raised">
                   <div className={`p-6 rounded-2xl soft-inset ${spreadMode === '2-page' ? 'grid grid-cols-2 gap-3' : 'max-w-md mx-auto'}`}>
-                    <div className="p-4 bg-[#FFFDF9] rounded shadow min-h-[220px] flex flex-col justify-between">
-                      <div className="text-center pb-2 border-b border-black/10 text-[9px] uppercase tracking-widest text-[#4F5B2A]">{authorName}</div>
+                    <div className="p-4 bg-[#FFFDF9] rounded shadow min-h-[220px] flex flex-col justify-between border-t-2 border-emerald-600">
+                      <div className="text-center pb-2 border-b border-black/10 text-[9px] uppercase tracking-widest text-emerald-800 font-bold">{authorName}</div>
                       <p className="font-editorial text-[10px] leading-relaxed text-[#2D2A26]">{manuscriptParagraphs[0]}</p>
-                      <span className="text-[9px] text-[#4F5B2A]">Page 1</span>
+                      <span className="text-[9px] text-[#555045]">Page 1</span>
                     </div>
 
                     {spreadMode === '2-page' && (
-                      <div className="p-4 bg-[#FFFDF9] rounded shadow min-h-[220px] flex flex-col justify-between">
-                        <div className="text-center pb-2 border-b border-black/10 text-[9px] uppercase tracking-widest text-[#4F5B2A]">{bookTitle}</div>
+                      <div className="p-4 bg-[#FFFDF9] rounded shadow min-h-[220px] flex flex-col justify-between border-t-2 border-emerald-600">
+                        <div className="text-center pb-2 border-b border-black/10 text-[9px] uppercase tracking-widest text-emerald-800 font-bold">{bookTitle}</div>
                         <p className="font-editorial text-[10px] leading-relaxed text-[#2D2A26]">{manuscriptParagraphs[1] || 'End of chapter.'}</p>
-                        <span className="text-[9px] text-[#4F5B2A] text-right">Page 2</span>
+                        <span className="text-[9px] text-[#555045] text-right">Page 2</span>
                       </div>
                     )}
                   </div>
@@ -663,8 +684,8 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
               </div>
 
               {quickFixDrawerOpen && (
-                <div className="p-5 rounded-3xl soft-inset space-y-3">
-                  <h4 className="text-xs font-bold uppercase text-[#4F5B2A]">Edit Manuscript Content</h4>
+                <div className="p-5 rounded-3xl soft-inset space-y-3 bg-teal-500/5">
+                  <h4 className="text-xs font-bold uppercase text-teal-900">Edit Manuscript Content</h4>
                   {manuscriptParagraphs.map((para, idx) => (
                     <textarea
                       key={idx}
@@ -675,7 +696,7 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                         copy[idx] = e.target.value;
                         setManuscriptParagraphs(copy);
                       }}
-                      className="w-full p-2.5 rounded-xl text-xs bg-white text-[#1C2010] border border-black/10 outline-none"
+                      className="w-full p-2.5 rounded-xl text-xs bg-white text-[#1C2010] border border-teal-500/30 outline-none"
                     />
                   ))}
                 </div>
@@ -688,43 +709,43 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
             <div className="space-y-6">
               <div>
                 <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[#1C2010]">Step 3: Cover Blueprint Specification</h2>
-                <p className="text-xs text-[#4F5B2A] mt-1">300 DPI full-wrap layout with barcode protection margin</p>
+                <p className="text-xs text-[#555045] mt-1">300 DPI full-wrap layout with barcode protection margin</p>
               </div>
 
               <div className="p-3 rounded-2xl soft-inset grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs font-semibold">
-                <div>SPINE WIDTH: <span className="font-mono text-[#4F5B2A] font-bold">{spineWidth}"</span></div>
-                <div>TOTAL WIDTH: <span className="font-mono font-bold">{fullCoverWidth}"</span></div>
-                <div>TOTAL HEIGHT: <span className="font-mono font-bold">{fullCoverHeight}"</span></div>
-                <div>CANVAS @ 300 DPI: <span className="font-mono text-[#B8892D] font-bold">{coverPixelsWidth} x {coverPixelsHeight} px</span></div>
+                <div>SPINE WIDTH: <span className="font-mono text-emerald-700 font-bold">{spineWidth}"</span></div>
+                <div>TOTAL WIDTH: <span className="font-mono text-blue-700 font-bold">{fullCoverWidth}"</span></div>
+                <div>TOTAL HEIGHT: <span className="font-mono text-purple-700 font-bold">{fullCoverHeight}"</span></div>
+                <div>CANVAS @ 300 DPI: <span className="font-mono text-amber-700 font-bold">{coverPixelsWidth} x {coverPixelsHeight} px</span></div>
               </div>
 
               <div className="p-6 rounded-3xl soft-raised">
                 <div className="flex justify-between items-center mb-4">
-                  <span className="text-[10px] font-mono uppercase font-bold text-[#4F5B2A]">LIVE BLUEPRINT CANVAS</span>
-                  <button onClick={handleExportFullCoverArtwork} className="soft-btn-primary px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+                  <span className="text-[10px] font-mono uppercase font-bold text-emerald-800">LIVE BLUEPRINT CANVAS</span>
+                  <button onClick={handleExportFullCoverArtwork} className="bg-gradient-to-r from-emerald-700 to-teal-700 text-white px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 shadow hover:opacity-95 cursor-pointer">
                     <Download className="w-3.5 h-3.5" />
                     <span>Download Cover (300 DPI)</span>
                   </button>
                 </div>
 
                 <div className="p-6 rounded-2xl soft-inset">
-                  <div className="relative w-full aspect-[2/1] border-2 border-dashed border-red-400 rounded bg-[#FFFDF9] flex items-center justify-between p-4 overflow-hidden">
-                    <div className="flex-1 h-full border-r border-dashed border-black/20 p-2 flex flex-col justify-between">
-                      <span className="text-xs font-bold text-center block">BACK COVER ({currentTrim.width}" × {currentTrim.height}")</span>
-                      <div className="self-end p-2 border border-red-500 bg-red-500/20 rounded text-[8px] font-mono text-red-600 font-bold">
+                  <div className="relative w-full aspect-[2/1] border-2 border-dashed border-rose-400 rounded bg-[#FFFDF9] flex items-center justify-between p-4 overflow-hidden">
+                    <div className="flex-1 h-full border-r border-dashed border-black/20 p-2 flex flex-col justify-between bg-amber-500/5">
+                      <span className="text-xs font-bold text-center block text-amber-900">BACK COVER ({currentTrim.width}" × {currentTrim.height}")</span>
+                      <div className="self-end p-2 border border-rose-500 bg-rose-500/20 rounded text-[8px] font-mono text-rose-700 font-bold">
                         BARCODE ZONE (2.0" × 1.2")
                       </div>
                     </div>
-                    <div className="w-8 sm:w-12 h-full flex items-center justify-center bg-black/5 border-r border-dashed border-black/20 text-[9px] font-mono -rotate-90 text-[#4F5B2A] font-bold">
+                    <div className="w-8 sm:w-12 h-full flex items-center justify-center bg-teal-500/10 border-r border-dashed border-black/20 text-[9px] font-mono -rotate-90 text-teal-900 font-bold">
                       {pageExtent >= 80 ? bookTitle.slice(0, 14) : ''}
                     </div>
-                    <div className="flex-1 h-full p-2 flex flex-col justify-between items-center text-center">
-                      <span className="text-xs font-bold block">FRONT COVER</span>
+                    <div className="flex-1 h-full p-2 flex flex-col justify-between items-center text-center bg-emerald-500/5">
+                      <span className="text-xs font-bold block text-emerald-900">FRONT COVER</span>
                       <div>
-                        <h4 className="font-editorial text-sm font-bold">{bookTitle}</h4>
-                        <p className="text-[10px] text-[#4F5B2A]">{authorName}</p>
+                        <h4 className="font-editorial text-sm font-bold text-[#1C2010]">{bookTitle}</h4>
+                        <p className="text-[10px] text-emerald-800">{authorName}</p>
                       </div>
-                      <span className="text-[8px] text-[#4F5B2A]">0.25" Safe Margin</span>
+                      <span className="text-[8px] text-emerald-700 font-semibold">0.25" Safe Margin</span>
                     </div>
                   </div>
                 </div>
@@ -738,50 +759,50 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
               <div className="flex justify-between items-center">
                 <div>
                   <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[#1C2010]">Step 4: Preflight Verification & 15-Territory Financials</h2>
-                  <p className="text-xs text-[#4F5B2A] mt-1">Multi-country auto-FX conversion and compound 12-month trajectory</p>
+                  <p className="text-xs text-[#555045] mt-1">Multi-country auto-FX conversion and compound 12-month trajectory</p>
                 </div>
-                <span className="px-3.5 py-1 rounded-full bg-emerald-500/15 text-emerald-800 font-bold text-xs">100% Ready</span>
+                <span className="px-3.5 py-1 rounded-full bg-emerald-500/20 text-emerald-900 font-bold text-xs border border-emerald-500/30">100% Ready</span>
               </div>
 
               {/* 12-MONTH ANNUAL CUMULATIVE REVENUE REPORT */}
               <div className="p-6 rounded-3xl soft-raised space-y-4">
                 <div className="flex items-center justify-between pb-2 border-b border-black/10">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#4F5B2A] flex items-center gap-1.5">
-                    <Calendar className="w-4 h-4" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-emerald-600" />
                     12-Month Cumulative Projection ({activeSelectedTerritories.length} Selected Territories)
                   </span>
-                  <span className="text-xs font-mono font-bold text-[#4F5B2A]">Format: {publishingFormat.toUpperCase()}</span>
+                  <span className="text-xs font-mono font-bold text-teal-800 bg-teal-500/10 px-2.5 py-0.5 rounded-full">Format: {publishingFormat.toUpperCase()}</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
-                  <div className="p-4 rounded-2xl bg-white shadow-xs">
-                    <span className="text-[10px] text-[#4F5B2A] block font-semibold">🥉 Conservative (Low Velocity)</span>
+                  <div className="p-4 rounded-2xl bg-white shadow-xs border-t-2 border-amber-500">
+                    <span className="text-[10px] text-amber-800 block font-bold">🥉 Conservative (Low Velocity)</span>
                     <span className="text-base font-bold font-mono text-[#1C2010] mt-1 block">
                       ${annualReportData.conservative.annualUsd.toLocaleString()} / ₹{annualReportData.conservative.annualInr.toLocaleString()}
                     </span>
-                    <span className="text-[10px] text-[#4F5B2A] block font-mono">{annualReportData.conservative.annualUnits} units/yr</span>
+                    <span className="text-[10px] text-[#555045] block font-mono">{annualReportData.conservative.annualUnits} units/yr</span>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-white shadow-xs">
-                    <span className="text-[10px] text-[#4F5B2A] block font-semibold">🥈 Benchmark (Target Velocity)</span>
-                    <span className="text-base font-bold font-mono text-[#4F5B2A] mt-1 block">
+                  <div className="p-4 rounded-2xl bg-white shadow-xs border-t-2 border-emerald-600">
+                    <span className="text-[10px] text-emerald-800 block font-bold">🥈 Benchmark (Target Velocity)</span>
+                    <span className="text-base font-bold font-mono text-emerald-700 mt-1 block">
                       ${annualReportData.average.annualUsd.toLocaleString()} / ₹{annualReportData.average.annualInr.toLocaleString()}
                     </span>
-                    <span className="text-[10px] text-[#4F5B2A] block font-mono">{annualReportData.average.annualUnits} units/yr</span>
+                    <span className="text-[10px] text-[#555045] block font-mono">{annualReportData.average.annualUnits} units/yr</span>
                   </div>
 
-                  <div className="p-4 rounded-2xl bg-white shadow-xs">
-                    <span className="text-[10px] text-[#4F5B2A] block font-semibold">🥇 Scaled (Ad Scaling)</span>
-                    <span className="text-base font-bold font-mono text-[#B8892D] mt-1 block">
+                  <div className="p-4 rounded-2xl bg-white shadow-xs border-t-2 border-purple-600">
+                    <span className="text-[10px] text-purple-800 block font-bold">🥇 Scaled (Ad Scaling)</span>
+                    <span className="text-base font-bold font-mono text-purple-700 mt-1 block">
                       ${annualReportData.scaled.annualUsd.toLocaleString()} / ₹{annualReportData.scaled.annualInr.toLocaleString()}
                     </span>
-                    <span className="text-[10px] text-[#4F5B2A] block font-mono">{annualReportData.scaled.annualUnits} units/yr</span>
+                    <span className="text-[10px] text-[#555045] block font-mono">{annualReportData.scaled.annualUnits} units/yr</span>
                   </div>
                 </div>
 
                 {/* FORMAT CONTROLLER */}
-                <div className="p-3.5 rounded-2xl soft-inset flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <span className="text-xs font-bold uppercase text-[#1C2010]">Publishing Format:</span>
+                <div className="p-3.5 rounded-2xl soft-inset flex flex-col sm:flex-row items-center justify-between gap-3 bg-teal-500/5">
+                  <span className="text-xs font-bold uppercase text-teal-900">Publishing Format:</span>
                   <div className="flex gap-1.5">
                     {[
                       { id: 'paperback', label: 'Paperback Only' },
@@ -791,7 +812,7 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                       <button
                         key={f.id}
                         onClick={() => setPublishingFormat(f.id)}
-                        className={`px-3 py-1 rounded-xl text-xs font-bold cursor-pointer ${publishingFormat === f.id ? 'bg-[#4F5B2A] text-white shadow-xs' : 'text-[#4F5B2A]'}`}
+                        className={`px-3 py-1 rounded-xl text-xs font-bold cursor-pointer ${publishingFormat === f.id ? 'bg-gradient-to-r from-emerald-700 to-teal-700 text-white shadow-xs' : 'text-teal-900'}`}
                       >
                         {f.label}
                       </button>
@@ -802,40 +823,40 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 {/* TRAJECTORY SLIDERS */}
                 <div className="p-4 rounded-2xl soft-inset space-y-3">
                   <div className="flex justify-between items-center text-xs font-bold text-[#1C2010]">
-                    <span>Month 1 Starting Copies: {initialMonthlySales}</span>
-                    <span>Monthly Trajectory: {monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${monthlyGrowthRate}%`}/mo</span>
+                    <span className="text-emerald-800">Month 1 Starting Copies: {initialMonthlySales}</span>
+                    <span className="text-teal-800">Monthly Trajectory: {monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${monthlyGrowthRate}%`}/mo</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <input type="range" min={5} max={500} step={5} value={initialMonthlySales} onChange={(e) => setInitialMonthlySales(parseInt(e.target.value))} className="w-full accent-[#4F5B2A]" />
-                    <input type="range" min={-10} max={25} step={1} value={monthlyGrowthRate} onChange={(e) => setMonthlyGrowthRate(parseInt(e.target.value))} className="w-full accent-[#4F5B2A]" />
+                    <input type="range" min={5} max={500} step={5} value={initialMonthlySales} onChange={(e) => setInitialMonthlySales(parseInt(e.target.value))} className="w-full accent-emerald-600" />
+                    <input type="range" min={-10} max={25} step={1} value={monthlyGrowthRate} onChange={(e) => setMonthlyGrowthRate(parseInt(e.target.value))} className="w-full accent-teal-600" />
                   </div>
                   <div className="grid grid-cols-3 gap-2 pt-2 border-t border-black/10 text-center font-mono text-xs">
-                    <div>M1: <strong>{annualReportData.average.m1Units}</strong> copies</div>
-                    <div>M6: <strong>{annualReportData.average.m6Units}</strong> copies</div>
-                    <div>M12: <strong>{annualReportData.average.m12Units}</strong> copies</div>
+                    <div>M1: <strong className="text-emerald-700">{annualReportData.average.m1Units}</strong> copies</div>
+                    <div>M6: <strong className="text-teal-700">{annualReportData.average.m6Units}</strong> copies</div>
+                    <div>M12: <strong className="text-purple-700">{annualReportData.average.m12Units}</strong> copies</div>
                   </div>
                 </div>
 
                 {/* US BASE PRICE */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] font-bold uppercase block mb-1">US Paperback Retail ($ USD):</label>
+                    <label className="text-[11px] font-bold uppercase block mb-1 text-emerald-900">US Paperback Retail ($ USD):</label>
                     <input
                       type="number"
                       step="0.50"
                       value={usPaperbackPrice}
                       onChange={(e) => handleUsPriceChange(e.target.value, 'paperback')}
-                      className="w-full p-2 font-mono font-bold text-xs rounded-xl bg-white border border-black/10 outline-none"
+                      className="w-full p-2 font-mono font-bold text-xs rounded-xl bg-white border border-emerald-500/30 outline-none text-emerald-900"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] font-bold uppercase block mb-1">US eBook Retail ($ USD):</label>
+                    <label className="text-[11px] font-bold uppercase block mb-1 text-teal-900">US eBook Retail ($ USD):</label>
                     <input
                       type="number"
                       step="0.50"
                       value={usEbookPrice}
                       onChange={(e) => handleUsPriceChange(e.target.value, 'ebook')}
-                      className="w-full p-2 font-mono font-bold text-xs rounded-xl bg-white border border-black/10 outline-none"
+                      className="w-full p-2 font-mono font-bold text-xs rounded-xl bg-white border border-teal-500/30 outline-none text-teal-900"
                     />
                   </div>
                 </div>
@@ -844,12 +865,12 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 <div className="pt-2">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-xs font-bold uppercase text-[#1C2010] flex items-center gap-1.5">
-                      <Globe className="w-4 h-4 text-[#4F5B2A]" />
+                      <Globe className="w-4 h-4 text-emerald-600" />
                       Territory Earnings ({activeSelectedTerritories.length} Active)
                     </span>
                     <button
                       onClick={() => setSelectedKdpCountries(selectedKdpCountries.length === Object.keys(POD_MARKETPLACES).length ? ['US', 'IN'] : Object.keys(POD_MARKETPLACES))}
-                      className="text-xs font-bold text-[#4F5B2A] hover:underline cursor-pointer"
+                      className="text-xs font-bold text-emerald-700 hover:underline cursor-pointer"
                     >
                       {selectedKdpCountries.length === Object.keys(POD_MARKETPLACES).length ? 'Deselect All' : 'Select All Territories'}
                     </button>
@@ -857,19 +878,22 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {activeSelectedTerritories.map((item) => (
-                      <div key={item.code} className="p-3.5 rounded-2xl soft-inset text-xs space-y-1">
-                        <span className="font-bold text-[#4F5B2A] block">{item.name}</span>
+                      <div key={item.code} className="p-3.5 rounded-2xl soft-inset text-xs space-y-1 bg-gradient-to-br from-[#F5EFE3] to-[#EAE2CE]/50">
+                        <span className="font-bold text-emerald-800 block flex justify-between">
+                          <span>{item.name}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-900">{item.code}</span>
+                        </span>
                         <div className="flex justify-between">
-                          <span className="text-[#4F5B2A]">Print Cost:</span>
-                          <span className="font-mono font-bold">{item.symbol}{item.printCost}</span>
+                          <span className="text-[#555045]">Print Cost:</span>
+                          <span className="font-mono font-bold text-rose-700">{item.symbol}{item.printCost}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-[#4F5B2A]">Retail:</span>
-                          <span className="font-mono font-bold">{item.symbol}{item.pbActivePrice}</span>
+                          <span className="text-[#555045]">Retail:</span>
+                          <span className="font-mono font-bold text-blue-700">{item.symbol}{item.pbActivePrice}</span>
                         </div>
                         <div className="flex justify-between pt-1 border-t border-black/10 font-bold">
                           <span>Royalty:</span>
-                          <span className="text-[#B8892D]">+{item.symbol}{item.royaltyPerUnit}</span>
+                          <span className="text-emerald-700">+{item.symbol}{item.royaltyPerUnit}</span>
                         </div>
                       </div>
                     ))}
@@ -879,21 +903,21 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
 
               {/* PREFLIGHT CHECKS */}
               <div className="p-6 rounded-3xl soft-raised space-y-2 text-xs">
-                <span className="text-[10px] font-mono uppercase font-bold text-[#4F5B2A] block mb-1">PREFLIGHT PASS CHECKS</span>
-                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-800 flex justify-between font-semibold">
+                <span className="text-[10px] font-mono uppercase font-bold text-emerald-800 block mb-1">PREFLIGHT PASS CHECKS</span>
+                <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-900 flex justify-between font-bold border border-emerald-500/30">
                   <span>✓ Page Extent Compatible ({pageExtent} pages meets trade minimums)</span>
-                  <span>PASS</span>
+                  <span className="text-emerald-700">PASS</span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-800 flex justify-between font-semibold">
+                <div className="p-2.5 rounded-xl bg-teal-500/15 text-teal-900 flex justify-between font-bold border border-teal-500/30">
                   <span>✓ Spine Gutter Clearance ({calculatedGutter}" inside margin prevents crease clipping)</span>
-                  <span>PASS</span>
+                  <span className="text-teal-700">PASS</span>
                 </div>
-                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-800 flex justify-between font-semibold">
+                <div className="p-2.5 rounded-xl bg-blue-500/15 text-blue-900 flex justify-between font-bold border border-blue-500/30">
                   <span>✓ 300 DPI Resolution ({coverPixelsWidth} x {coverPixelsHeight} px verified)</span>
-                  <span>PASS</span>
+                  <span className="text-blue-700">PASS</span>
                 </div>
                 <div className="pt-4 flex justify-end">
-                  <button onClick={handleDownloadSpecification} className="soft-btn-primary px-6 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 cursor-pointer">
+                  <button onClick={handleDownloadSpecification} className="bg-gradient-to-r from-emerald-700 to-teal-700 text-white px-6 py-2.5 rounded-full text-xs font-bold flex items-center gap-2 shadow hover:opacity-95 cursor-pointer">
                     <Download className="w-4 h-4" />
                     <span>Download Production Specification (.txt)</span>
                   </button>
@@ -904,7 +928,7 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
 
           {/* DOCK BAR */}
           <div className="fixed bottom-0 left-0 right-0 z-30 p-3 bg-white/95 backdrop-blur-md flex items-center justify-between max-w-5xl mx-auto border-t border-black/10">
-            <button onClick={() => setActiveView('home')} className="px-4 py-2 rounded-full text-xs font-semibold soft-btn-pill cursor-pointer">
+            <button onClick={() => setActiveView('home')} className="px-4 py-2 rounded-full text-xs font-semibold soft-btn-pill text-emerald-800 cursor-pointer">
               Home Overview
             </button>
 
@@ -916,19 +940,19 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                 </button>
               )}
               {currentStep < 4 ? (
-                <button onClick={() => setCurrentStep(prev => prev + 1)} className="px-5 py-2 rounded-full text-xs font-bold soft-btn-primary flex items-center gap-1 cursor-pointer">
+                <button onClick={() => setCurrentStep(prev => prev + 1)} className="px-5 py-2 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-700 to-teal-700 text-white flex items-center gap-1 shadow cursor-pointer">
                   <span>Next Step</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               ) : (
-                <button onClick={handleDownloadSpecification} className="px-5 py-2 rounded-full text-xs font-bold soft-btn-primary flex items-center gap-1 cursor-pointer">
+                <button onClick={handleDownloadSpecification} className="px-5 py-2 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-700 to-teal-700 text-white flex items-center gap-1 shadow cursor-pointer">
                   <Download className="w-3.5 h-3.5" />
                   <span>Complete Studio</span>
                 </button>
               )}
             </div>
 
-            <button onClick={() => setHelpProfileDrawerOpen(true)} className="px-4 py-2 rounded-full text-xs font-bold soft-btn-pill text-[#4F5B2A] cursor-pointer">
+            <button onClick={() => setHelpProfileDrawerOpen(true)} className="px-4 py-2 rounded-full text-xs font-bold soft-btn-pill text-teal-800 cursor-pointer">
               Help & Profile
             </button>
           </div>
@@ -938,28 +962,28 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
       {/* AI MODAL (BYOK) */}
       {aiModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-lg rounded-3xl p-6 soft-raised space-y-4">
+          <div className="w-full max-w-lg rounded-3xl p-6 soft-raised space-y-4 bg-[#F5EFE3]">
             <div className="flex items-center justify-between pb-3 border-b border-black/10">
               <div className="flex items-center gap-2">
-                <Cpu className="w-5 h-5 text-[#4F5B2A]" />
+                <Cpu className="w-5 h-5 text-indigo-600" />
                 <h3 className="font-editorial font-bold text-base">Client-Side AI Generator</h3>
               </div>
               <button onClick={() => setAiModalOpen(false)}><X className="w-4 h-4 cursor-pointer" /></button>
             </div>
 
             <div>
-              <label className="text-[11px] font-bold uppercase block mb-1">Gemini API Key (BYOK):</label>
+              <label className="text-[11px] font-bold uppercase block mb-1 text-indigo-900">Gemini API Key (BYOK):</label>
               <input
                 type="password"
                 placeholder="AIzaSy..."
                 value={userApiKey}
                 onChange={(e) => setUserApiKey(e.target.value)}
-                className="w-full p-2.5 rounded-xl text-xs bg-white border border-black/10 outline-none"
+                className="w-full p-2.5 rounded-xl text-xs bg-white border border-indigo-500/30 outline-none text-indigo-900"
               />
             </div>
 
             <div>
-              <label className="text-[11px] font-bold uppercase block mb-1">Intent:</label>
+              <label className="text-[11px] font-bold uppercase block mb-1 text-indigo-900">Intent:</label>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { id: 'chapter', label: '📖 Chapter 1 Narrative' },
@@ -970,7 +994,7 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
                   <button
                     key={item.id}
                     onClick={() => setAiContentType(item.id)}
-                    className={`p-2 rounded-xl text-xs font-semibold border text-left cursor-pointer ${aiContentType === item.id ? 'border-[#4F5B2A] bg-[#4F5B2A]/10 text-[#4F5B2A]' : 'border-black/10'}`}
+                    className={`p-2 rounded-xl text-xs font-semibold border text-left cursor-pointer ${aiContentType === item.id ? 'border-indigo-600 bg-indigo-500/15 text-indigo-900 font-bold' : 'border-black/10 text-[#555045]'}`}
                   >
                     {item.label}
                   </button>
@@ -980,7 +1004,7 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
 
             <div className="flex justify-end gap-2 pt-2">
               <button onClick={() => setAiModalOpen(false)} className="px-4 py-2 rounded-full text-xs font-semibold cursor-pointer">Cancel</button>
-              <button onClick={handleGenerateAiContent} disabled={isGeneratingAi} className="soft-btn-primary px-5 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+              <button onClick={handleGenerateAiContent} disabled={isGeneratingAi} className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 shadow cursor-pointer">
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>{isGeneratingAi ? 'Writing...' : 'Generate Content'}</span>
               </button>
@@ -992,25 +1016,25 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
       {/* HELP & AUTHOR IDENTITY DRAWER */}
       {helpProfileDrawerOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-3xl p-6 soft-raised space-y-4">
+          <div className="w-full max-w-md rounded-3xl p-6 soft-raised space-y-4 bg-[#F5EFE3]">
             <div className="flex items-center justify-between pb-3 border-b border-black/10">
-              <h3 className="font-editorial font-bold text-base">Help Center & Author Identity</h3>
+              <h3 className="font-editorial font-bold text-base text-emerald-900">Help Center & Author Identity</h3>
               <button onClick={() => setHelpProfileDrawerOpen(false)}><X className="w-4 h-4 cursor-pointer" /></button>
             </div>
 
             <div className="space-y-3">
-              <span className="text-[10px] font-mono uppercase font-bold text-[#4F5B2A] block">AUTHOR IDENTITY (REMEMBERED LOCALLY)</span>
-              <input type="text" placeholder="Author Name" value={authorName} onChange={(e) => setAuthorName(e.target.value)} className="w-full p-2.5 rounded-xl text-xs bg-white border border-black/10 outline-none" />
-              <input type="email" placeholder="Email Address" value={authorProfileEmail} onChange={(e) => setAuthorProfileEmail(e.target.value)} className="w-full p-2.5 rounded-xl text-xs bg-white border border-black/10 outline-none" />
+              <span className="text-[10px] font-mono uppercase font-bold text-emerald-800 block">AUTHOR IDENTITY (REMEMBERED LOCALLY)</span>
+              <input type="text" placeholder="Author Name" value={authorName} onChange={(e) => setAuthorName(e.target.value)} className="w-full p-2.5 rounded-xl text-xs bg-white border border-emerald-500/30 outline-none text-[#1C2010]" />
+              <input type="email" placeholder="Email Address" value={authorProfileEmail} onChange={(e) => setAuthorProfileEmail(e.target.value)} className="w-full p-2.5 rounded-xl text-xs bg-white border border-emerald-500/30 outline-none text-[#1C2010]" />
             </div>
 
             <div className="space-y-3 pt-2 border-t border-black/10">
-              <span className="text-[10px] font-mono uppercase font-bold text-[#4F5B2A] block">REPORT ISSUE / FEEDBACK</span>
-              <textarea rows={3} placeholder="Describe suggestions or issues..." value={feedbackFeedback} onChange={(e) => setFeedbackFeedback(e.target.value)} className="w-full p-2.5 rounded-xl text-xs bg-white border border-black/10 outline-none" />
+              <span className="text-[10px] font-mono uppercase font-bold text-emerald-800 block">REPORT ISSUE / FEEDBACK</span>
+              <textarea rows={3} placeholder="Describe suggestions or issues..." value={feedbackFeedback} onChange={(e) => setFeedbackFeedback(e.target.value)} className="w-full p-2.5 rounded-xl text-xs bg-white border border-emerald-500/30 outline-none text-[#1C2010]" />
               {feedbackSent ? (
-                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-800 text-xs font-bold text-center">✓ Feedback recorded locally!</div>
+                <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-900 text-xs font-bold text-center border border-emerald-500/30">✓ Feedback recorded locally!</div>
               ) : (
-                <button onClick={() => setFeedbackSent(true)} className="w-full py-2 rounded-full soft-btn-primary text-xs font-bold cursor-pointer">Submit Feedback</button>
+                <button onClick={() => setFeedbackSent(true)} className="w-full py-2 rounded-full bg-gradient-to-r from-emerald-700 to-teal-700 text-white text-xs font-bold shadow cursor-pointer">Submit Feedback</button>
               )}
             </div>
           </div>
@@ -1020,18 +1044,18 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
       {/* MY BOOKS SHELF */}
       {isShelfOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-3xl p-6 soft-raised space-y-4">
+          <div className="w-full max-w-md rounded-3xl p-6 soft-raised space-y-4 bg-[#F5EFE3]">
             <div className="flex items-center justify-between pb-3 border-b border-black/10">
-              <h3 className="font-editorial font-bold text-base">My Bookshelf</h3>
+              <h3 className="font-editorial font-bold text-base text-amber-900">My Bookshelf</h3>
               <button onClick={() => setIsShelfOpen(false)}><X className="w-4 h-4 cursor-pointer" /></button>
             </div>
             <div className="space-y-2 max-h-72 overflow-y-auto">
-              <div className="p-3 rounded-2xl soft-inset flex justify-between items-center">
+              <div className="p-3 rounded-2xl soft-inset flex justify-between items-center bg-amber-500/5 border border-amber-500/20">
                 <div>
-                  <h4 className="font-bold text-xs">{bookTitle}</h4>
-                  <p className="text-[10px] text-[#4F5B2A]">{authorName} • {trimSize} • {pageExtent} Pgs</p>
+                  <h4 className="font-bold text-xs text-[#1C2010]">{bookTitle}</h4>
+                  <p className="text-[10px] text-amber-800 font-medium">{authorName} • {trimSize} • {pageExtent} Pgs</p>
                 </div>
-                <span className="text-[10px] font-bold text-[#4F5B2A]">Active Draft</span>
+                <span className="text-[10px] font-bold px-2 py-1 rounded bg-amber-500/20 text-amber-900">Active Draft</span>
               </div>
             </div>
           </div>

@@ -267,7 +267,7 @@ export default function PublishStudioApp() {
         setManuscriptParagraphs(generated.split('\n\n').filter(p => p.trim().length > 0));
         setAiModalOpen(false);
         setActiveView('studio');
-        setCurrentStep(2);
+        setCurrentStep(1);
       }
     } catch (err) {
       alert('AI Generation error: ' + err.message);
@@ -425,14 +425,14 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
 
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
               <button
-                onClick={() => { setActiveView('studio'); setCurrentStep(1); }}
+                onClick={() => { setSelectedArchetype('fiction'); setActiveView('studio'); setCurrentStep(1); }}
                 className="w-full sm:w-auto px-8 py-3.5 rounded-full bg-gradient-to-r from-emerald-700 to-teal-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-lg hover:opacity-95 transition-all cursor-pointer"
               >
                 <span>Launch Book Production Studio</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
               <button
-                onClick={() => { setActiveView('studio'); setCurrentStep(2); }}
+                onClick={() => { setSelectedArchetype('fiction'); setActiveView('studio'); setCurrentStep(2); }}
                 className="w-full sm:w-auto px-7 py-3.5 rounded-full soft-btn-pill text-xs font-bold text-amber-900 border border-amber-500/30 bg-amber-500/10 cursor-pointer"
               >
                 Explore Demo Proof
@@ -440,16 +440,16 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
             </div>
           </div>
 
-          {/* FORMAT PREVIEW CARDS (WITH LIVE LINKS) */}
+          {/* FORMAT PREVIEW CARDS (NAVIGATES TO STEP 1 SETUP WITH CORRECT ARCHETYPE) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div 
-              onClick={() => { setSelectedArchetype('fiction'); setActiveView('studio'); setCurrentStep(2); }}
+              onClick={() => { setSelectedArchetype('fiction'); setActiveView('studio'); setCurrentStep(1); }}
               className="p-8 rounded-3xl soft-raised space-y-3 bg-[#F5EFE3] border-t-4 border-emerald-600 cursor-pointer hover:shadow-xl transition-all group"
             >
               <div className="flex items-center justify-between">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">A</div>
                 <span className="text-xs font-bold text-emerald-700 group-hover:underline flex items-center gap-1">
-                  Open Typeset Proof &rarr;
+                  Configure Setup &rarr;
                 </span>
               </div>
               <h3 className="font-editorial text-xl font-bold text-[#1C2010]">Text-Rich Manuscripts</h3>
@@ -457,13 +457,13 @@ MoM Trajectory:       ${monthlyGrowthRate > 0 ? `+${monthlyGrowthRate}%` : `${mo
             </div>
 
             <div 
-              onClick={() => { setSelectedArchetype('workbook'); setActiveView('studio'); setCurrentStep(2); }}
+              onClick={() => { setSelectedArchetype('workbook'); setActiveView('studio'); setCurrentStep(1); }}
               className="p-8 rounded-3xl soft-raised space-y-3 bg-[#F5EFE3] border-t-4 border-amber-600 cursor-pointer hover:shadow-xl transition-all group"
             >
               <div className="flex items-center justify-between">
                 <div className="w-10 h-10 rounded-2xl bg-amber-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">B</div>
                 <span className="text-xs font-bold text-amber-800 group-hover:underline flex items-center gap-1">
-                  Open Planner Proof &rarr;
+                  Configure Workbooks & Planners &rarr;
                 </span>
               </div>
               <h3 className="font-editorial text-xl font-bold text-[#1C2010]">Low-Content Creations</h3>

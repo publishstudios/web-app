@@ -115,7 +115,7 @@ export function inspectManuscriptDOM(containerElement, rawLines = []) {
       type: 'review',
       code: 'LOW_WORD_COUNT',
       title: 'Short Manuscript Extent',
-      message: `Total word count is ${wordCount.toLocaleString()} words. Standard print books typically require at least 5,000–10,000 words to achieve printable spine thickness.`,
+      message: `Total word count is ${wordCount.toLocaleString()} words. Confirm that the manuscript length suits your book type. Spine width is calculated from the final page count, paper stock, and binding specifications—not word count alone.`,
     });
   } else {
     passes.push({

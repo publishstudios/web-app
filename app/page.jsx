@@ -32,6 +32,8 @@ import {
   Bookmark
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, PageBreak } from 'docx';
+import { PDFDocument } from 'pdf-lib';
 import {
   saveProjectToStorage,
   getAllProjectsFromStorage,
@@ -120,6 +122,7 @@ const POD_MARKETPLACES = {
 const INITIAL_CHAPTERS = [
   {
     id: 'ch-1',
+    status: 'draft',
     number: 'Chapter One',
     title: 'The Sea Before Rain',
     paragraphs: [
@@ -129,6 +132,7 @@ const INITIAL_CHAPTERS = [
   },
   {
     id: 'ch-2',
+    status: 'draft',
     number: 'Chapter Two',
     title: 'The Proof of Binding',
     paragraphs: [
@@ -142,7 +146,10 @@ export default function PublishStudioApp() {
   /* ROUTING & ACTIVE VIEW */
   const [activeView, setActiveView] = useState('home'); // 'home' | 'studio'
   const [currentStep, setCurrentStep] = useState(1);
-  const [workflowMode, setWorkflowMode] = useState('manual'); // 'manual' | 'upload'
+  const [workflowMode, setWorkflowMode] = useState('manual'); // 'manual' | 'upload' | 'planner'
+  const [plannerImages, setPlannerImages] = useState([]);
+  const [plannerWarnings, setPlannerWarnings] = useState([]);
+  const [plannerExportError, setPlannerExportError] = useState('');
 
   /* BOOK DNA / METADATA */
   const [bookTitle, setBookTitle] = useState('The Memory Chef');
@@ -177,6 +184,11 @@ export default function PublishStudioApp() {
   const [spreadMode, setSpreadMode] = useState('2-page'); // '1-page' | '2-page'
   const [quickFixDrawerOpen, setQuickFixDrawerOpen] = useState(false);
   const [scoringModalOpen, setScoringModalOpen] = useState(false);
+  const [exportSuccessOpen, setExportSuccessOpen] = useState(false);
+  const [exportError, setExportError] = useState('');
+  const [deletePromptOpen, setDeletePromptOpen] = useState(false);
+  const [shelfProjects, setShelfProjects] = useState([]);
+  const [storageNotice, setStorageNotice] = useState('');
 
   /* FINANCIAL / REVENUE MATRIX */
   const [usPaperbackPrice, setUsPaperbackPrice] = useState('12.99');
@@ -201,6 +213,10 @@ export default function PublishStudioApp() {
     if (key) setUserApiKey(key);
     const savedAuthor = localStorage.getItem('ps_default_author');
     if (savedAuthor) setAuthorName(savedAuthor);
+    getAllProjectsFromStorage().then(setShelfProjects).catch(() => {
+      // IndexedDB may be unavailable in private browsing; the rest of the editor remains usable.
+      setShelfProjects([]);
+    });
   }, []);
 
   const handleAuthorNameChange = (val) => {
@@ -210,13 +226,129 @@ export default function PublishStudioApp() {
     }
   };
 
+  /* EXPORT: build a real editable Word document from the current manuscript.
+     Keep this function isolated so export rules can be updated without rewriting the UI. */
+  const handleExportWord = async () => {
+    setExportError('');
+    if (workflowMode === 'manual') {
+      const unfinished = chapters.filter(chapter => chapter.status !== 'final');
+      if (unfinished.length) {
+        setExportError(`Before exporting a guided book, mark every chapter Final. Still to review: ${unfinished.map(chapter => chapter.number || chapter.title || 'Untitled chapter').join(', ')}.`);
+        return;
+      }
+    }
+    try {
+      const children = [
+        new Paragraph({ text: bookTitle || 'Untitled Book', heading: HeadingLevel.TITLE, alignment: 'center' }),
+      ];
+      if (bookSubtitle?.trim()) children.push(new Paragraph({ text: bookSubtitle.trim(), alignment: 'center' }));
+      children.push(new Paragraph({ text: `By ${authorName || 'Unknown Author'}`, alignment: 'center' }));
+      children.push(new Paragraph({ children: [new PageBreak()] }));
+      if (copyrightNotice?.trim()) {
+        children.push(new Paragraph({ text: copyrightNotice.trim(), alignment: 'center' }));
+        children.push(new Paragraph({ children: [new PageBreak()] }));
+      }
+      if (dedicationText?.trim()) {
+        children.push(new Paragraph({ text: dedicationText.trim(), alignment: 'center' }));
+        children.push(new Paragraph({ children: [new PageBreak()] }));
+      }
+      chapters.forEach((chapter, index) => {
+        if (index > 0 || chapter.blankPageBefore) children.push(new Paragraph({ children: [new PageBreak()] }));
+        // A second page break intentionally leaves one blank page before this chapter.
+        if (chapter.blankPageBefore) children.push(new Paragraph({ children: [new PageBreak()] }));
+        if (chapter.number?.trim()) children.push(new Paragraph({ text: chapter.number.trim(), heading: HeadingLevel.HEADING_1, alignment: 'center' }));
+        if (chapter.title?.trim()) children.push(new Paragraph({ text: chapter.title.trim(), heading: HeadingLevel.HEADING_2, alignment: 'center' }));
+        (chapter.paragraphs || []).forEach((text) => {
+          if (text?.trim()) children.push(new Paragraph({ children: [new TextRun({ text: text.trim() })], spacing: { after: 180, line: 360 } }));
+        });
+      });
+      const doc = new Document({ sections: [{ properties: {}, children }] });
+      const blob = await Packer.toBlob(doc);
+      const safeTitle = (bookTitle || 'manuscript').replace(/[\\/:*?"<>|]+/g, '-').trim() || 'manuscript';
+      saveAs(blob, `${safeTitle}.docx`);
+      // Save a bookshelf snapshot after file generation. If local storage is unavailable, do not block the download.
+      try {
+        await saveProjectToStorage({
+          id: `project-${bookTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${Date.now()}`,
+          title: bookTitle || 'Untitled Book', author: authorName || 'Unknown Author', trimSize, pageExtent,
+          workflowMode, chapters: chapters.map(chapter => ({ ...chapter, paragraphs: [...(chapter.paragraphs || [])] }))
+        });
+        setShelfProjects(await getAllProjectsFromStorage());
+      } catch (storageError) {
+        console.warn('The Word file was created, but the bookshelf snapshot could not be saved.', storageError);
+      }
+      setExportSuccessOpen(true);
+    } catch (error) {
+      console.error('Word export failed:', error);
+      setExportError('The Word document could not be created. Please try again. If the problem continues, refresh the page and retry.');
+    }
+  };
+
+  /* PLANNER EXPORT: build a print-size PDF from uploaded page images. Images are contained, never stretched or cropped. */
+  const handleExportPlannerPdf = async () => {
+    setPlannerExportError('');
+    if (!plannerImages.length) {
+      setPlannerExportError('Upload at least one interior page image before exporting.');
+      return;
+    }
+    try {
+      const pdf = await PDFDocument.create();
+      const trim = TRIM_OPTIONS.find(option => option.id === trimSize) || TRIM_OPTIONS.find(option => option.id === '8.5x11');
+      const pageWidth = trim.width * 72;
+      const pageHeight = trim.height * 72;
+      for (const item of plannerImages) {
+        const bytes = await item.file.arrayBuffer();
+        const image = item.type === 'image/png' ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
+        const page = pdf.addPage([pageWidth, pageHeight]);
+        const scale = Math.min(pageWidth / image.width, pageHeight / image.height);
+        const drawWidth = image.width * scale;
+        const drawHeight = image.height * scale;
+        page.drawImage(image, { x: (pageWidth - drawWidth) / 2, y: (pageHeight - drawHeight) / 2, width: drawWidth, height: drawHeight });
+      }
+      const bytes = await pdf.save();
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const safeTitle = (bookTitle || 'planner-interior').replace(/[\\/:*?"<>|]+/g, '-').trim() || 'planner-interior';
+      saveAs(blob, `${safeTitle}-print-interior.pdf`);
+      setExportSuccessOpen(true);
+    } catch (error) {
+      console.error('Planner PDF export failed:', error);
+      setPlannerExportError('The print PDF could not be created. Use PNG or JPEG page images and try again.');
+    }
+  };
+
+  const handlePlannerImageSelection = async (event) => {
+    const files = Array.from(event.target.files || []).filter(file => ['image/png', 'image/jpeg'].includes(file.type));
+    const warnings = [];
+    const prepared = [];
+    for (const file of files) {
+      const dimensions = await new Promise(resolve => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => { resolve({ width: img.naturalWidth, height: img.naturalHeight }); URL.revokeObjectURL(url); };
+        img.onerror = () => { resolve(null); URL.revokeObjectURL(url); };
+        img.src = url;
+      });
+      if (!dimensions) { warnings.push(`${file.name}: could not read image dimensions.`); continue; }
+      const trim = TRIM_OPTIONS.find(option => option.id === trimSize) || TRIM_OPTIONS.find(option => option.id === '8.5x11');
+      if (dimensions.width < trim.width * 300 || dimensions.height < trim.height * 300) {
+        warnings.push(`${file.name}: ${dimensions.width}×${dimensions.height}px may be below 300 DPI for ${trim.width}×${trim.height} inches.`);
+      }
+      prepared.push({ file, type: file.type, ...dimensions });
+    }
+    if (files.length !== (event.target.files || []).length) warnings.push('Only PNG and JPEG images are supported. Unsupported files were skipped.');
+    setPlannerImages(prev => [...prev, ...prepared]);
+    setPlannerWarnings(warnings);
+    event.target.value = '';
+  };
+
   /* CHAPTER MANIPULATION */
   const handleAddChapter = () => {
     const nextNum = chapters.length + 1;
     const newId = `ch-${Date.now()}`;
     const newChapter = {
       id: newId,
-      number: `Chapter ${nextNum}`,
+      status: 'draft',
+      number: `Chapter ${nextNum}`, 
       title: 'Untitled Chapter',
       paragraphs: ['Click here to start writing or pasting this chapter...']
     };
@@ -465,6 +597,7 @@ export default function PublishStudioApp() {
         </div>
       </header>
 
+      {/* SECTION: HOME WORKFLOW SELECTOR — Update pathway labels and descriptions here. Export logic is defined separately above. */}
       {/* VIEW A: LANDING / HOME */}
       {activeView === 'home' && (
         <main className="max-w-6xl mx-auto px-4 py-12 space-y-16 animate-in fade-in">
@@ -479,7 +612,7 @@ export default function PublishStudioApp() {
               </span>
             </h1>
             <p className="text-base sm:text-lg text-[#555045] max-w-2xl mx-auto leading-relaxed">
-              Eliminate printing rejections across KDP and IngramSpark. Build clean books section-by-section with automated Tables of Contents, gutter calculations, and multi-country royalties.
+              Prepare cleaner publishing files with section-by-section book setup, formatting checks, gutter estimates, and royalty planning. Always review the final files against your chosen platform’s current requirements.
             </p>
           </div>
 
@@ -499,7 +632,7 @@ export default function PublishStudioApp() {
                   ★
                 </div>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-900 font-mono">
-                  100% REJECTION-FREE
+                  OPTION A
                 </span>
               </div>
               <h3 className="font-editorial text-xl font-bold text-[#1C2010]">
@@ -531,14 +664,14 @@ export default function PublishStudioApp() {
               </div>
               <h3 className="font-editorial text-xl font-bold text-[#1C2010]">Full Manuscript Ingestion</h3>
               <p className="text-xs text-[#555045] leading-relaxed">
-                Upload existing single .txt or .docx drafts with automatic binding gutter calculations and alternating headers.
+                For an existing Word manuscript: upload, review the setup, then export an editable Word file. DOCX upload parsing is not available in this revision yet.
               </p>
             </div>
 
             {/* OPTION C: LOW-CONTENT CREATIONS */}
             <div
               onClick={() => {
-                setWorkflowMode('upload');
+                setWorkflowMode('planner');
                 setSelectedArchetype('workbook');
                 setTrimSize('8.5x11');
                 setActiveView('studio');
@@ -554,7 +687,7 @@ export default function PublishStudioApp() {
               </div>
               <h3 className="font-editorial text-xl font-bold text-[#1C2010]">Low-Content & Planners</h3>
               <p className="text-xs text-[#555045] leading-relaxed">
-                Workbooks, journals, and daily trackers with 300 DPI preservation and barcode exclusion zones.
+                Upload interior page images, check resolution warnings, preview the trim-size output, and export a print-sized PDF. Image pages are contained without stretching or cropping.
               </p>
             </div>
           </div>
@@ -617,6 +750,16 @@ export default function PublishStudioApp() {
           {/* ========================================================================= */}
           {/* STEP 1: SPECIFICATION & MANUSCRIPT SETUP */}
           {/* ========================================================================= */}
+          {workflowMode === 'planner' && (
+            <section className="mb-6 rounded-3xl soft-raised bg-[#FAF6ED] border border-amber-500/30 p-5 space-y-3">
+              <div><h2 className="font-editorial text-xl font-bold text-[#1C2010]">Planner & Interior Page Images</h2><p className="text-xs text-[#555045] mt-1">Upload pages in the order they should appear. PNG and JPEG are supported. Low-resolution pages are flagged; images are not silently stretched or cropped.</p></div>
+              <label className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-700 text-white text-xs font-bold cursor-pointer"><Upload className="w-4 h-4" /> Upload page images<input type="file" accept="image/png,image/jpeg" multiple className="sr-only" onChange={handlePlannerImageSelection} /></label>
+              {plannerImages.length > 0 && <div className="space-y-2"><p className="text-xs font-bold text-emerald-900">{plannerImages.length} page image(s) selected</p>{plannerImages.map((item, index) => <div key={`${item.file.name}-${index}`} className="flex items-center justify-between gap-3 rounded-xl bg-white p-2 text-xs"><span className="truncate">{index + 1}. {item.file.name}</span><span className="shrink-0 text-[#777064]">{item.width}×{item.height}px</span><button type="button" onClick={() => setPlannerImages(prev => prev.filter((_, i) => i !== index))} className="font-bold text-red-700">Remove</button></div>)}</div>}
+              {plannerWarnings.map((warning, index) => <p key={index} className="text-xs text-amber-900 bg-amber-100 rounded-lg p-2">⚠ {warning}</p>)}
+              {plannerExportError && <p role="alert" className="text-xs text-red-800 bg-red-50 rounded-lg p-2">{plannerExportError}</p>}
+            </section>
+          )}
+
           {currentStep === 1 && (
             <div className="space-y-6 animate-in fade-in">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#D8C9A8]/70">
@@ -1108,6 +1251,26 @@ export default function PublishStudioApp() {
                           </h3>
                         </div>
 
+                        {/* CHAPTER STATUS AND PAGE LAYOUT CONTROLS */}
+                        <div className="flex flex-wrap items-center justify-center gap-2 pt-3">
+                          <button
+                            type="button"
+                            onClick={() => setChapters(prev => prev.map(c => c.id === activeChapter.id ? { ...c, status: c.status === 'final' ? 'draft' : 'final' } : c))}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border ${activeChapter.status === 'final' ? 'bg-emerald-100 border-emerald-400 text-emerald-900' : 'bg-white border-black/10 text-[#555045]'}`}
+                          >
+                            {activeChapter.status === 'final' ? '✓ Chapter marked Final' : 'Mark chapter Final'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setChapters(prev => prev.map(c => c.id === activeChapter.id ? { ...c, blankPageBefore: !c.blankPageBefore } : c))}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold border ${activeChapter.blankPageBefore ? 'bg-amber-100 border-amber-400 text-amber-900' : 'bg-white border-black/10 text-[#555045]'}`}
+                            title="Add or remove an intentional blank page before this chapter in the Word export"
+                          >
+                            {activeChapter.blankPageBefore ? '✓ Blank page before chapter (on)' : 'Insert blank page before chapter'}
+                          </button>
+                          <span className="text-[10px] text-[#777064]">This setting is included in Word export; review pagination in Word after export.</span>
+                        </div>
+
                         {/* EDITABLE PARAGRAPHS */}
                         <div className="space-y-4 pt-4">
                           {activeChapter.paragraphs.map((p, pIdx) => (
@@ -1232,14 +1395,15 @@ export default function PublishStudioApp() {
           {/* ========================================================================= */}
           {currentStep === 4 && (
             <div className="space-y-6 animate-in fade-in">
+              {workflowMode === 'manual' && <p className="text-xs text-[#555045] bg-amber-50 border border-amber-200 rounded-xl p-3">Guided book export requires every chapter to be marked Final in the chapter editor. This is a workflow check, not a publishing-platform approval.</p>}
               <div className="flex justify-between items-center">
                 <div>
                   <h2 className="font-editorial text-2xl sm:text-3xl font-bold text-[#1C2010]">
                     Step 4: Preflight Verification & 15-Territory Financials
                   </h2>
                 </div>
-                <span className="px-3.5 py-1 rounded-full bg-emerald-500/20 text-emerald-900 font-bold text-xs">
-                  100% Ready
+                <span className="px-3.5 py-1 rounded-full bg-amber-500/20 text-amber-900 font-bold text-xs">
+                  Review required
                 </span>
               </div>
 
@@ -1263,6 +1427,8 @@ export default function PublishStudioApp() {
               </div>
             </div>
           )}
+
+          {exportError && <div role="alert" className="fixed bottom-16 left-4 right-4 z-40 mx-auto max-w-2xl rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-800 shadow">{exportError}</div>}
 
           {/* DOCK BAR */}
           <div className="fixed bottom-0 left-0 right-0 z-30 p-3 bg-white/95 backdrop-blur-md flex items-center justify-between max-w-6xl mx-auto border-t border-black/10">
@@ -1292,11 +1458,11 @@ export default function PublishStudioApp() {
                 </button>
               ) : (
                 <button
-                  onClick={() => alert('Book Export Complete!')}
+                  onClick={workflowMode === 'planner' ? handleExportPlannerPdf : handleExportWord}
                   className="px-5 py-2 rounded-full text-xs font-bold bg-gradient-to-r from-emerald-700 to-teal-700 text-white flex items-center gap-1 shadow cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Complete Studio</span>
+                  <span>{workflowMode === 'planner' ? 'Export Print PDF' : 'Export Word (.DOCX)'}</span>
                 </button>
               )}
             </div>
@@ -1308,6 +1474,49 @@ export default function PublishStudioApp() {
             </button>
           </div>
         </main>
+      )}
+
+      {/* EXPORT SUCCESS: only shown after DOCX generation and download are initiated. */}
+      {exportSuccessOpen && (
+        <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="export-success-title">
+          <div className="w-full max-w-lg rounded-3xl p-7 soft-raised space-y-4 bg-[#F5EFE3] text-center">
+            <div className="text-4xl" aria-hidden="true">🎉</div>
+            <h2 id="export-success-title" className="font-editorial text-2xl font-bold text-[#1C2010]">Congratulations, Author!</h2>
+            <p className="text-sm leading-relaxed text-[#555045]">{workflowMode === 'planner' ? 'Your print-sized planner PDF has been generated and the download has been initiated.' : 'Your book’s Word document has been generated and the download has been initiated.'} You’ve taken another step toward bringing your work into the world. Your story matters—keep going!</p>
+            <p className="text-xs text-[#555045]">Please open the downloaded file and review its layout before publishing. This export does not guarantee acceptance by a publishing platform.</p>
+            <button onClick={() => { setExportSuccessOpen(false); if (workflowMode === 'manual') setDeletePromptOpen(true); }} className="px-6 py-2.5 rounded-full text-sm font-bold bg-gradient-to-r from-emerald-700 to-teal-700 text-white">Continue</button>
+          </div>
+        </div>
+      )}
+
+      {/* DELETION IS OPTIONAL AND CONFIRMED; the downloaded file remains on the user's device. */}
+      {deletePromptOpen && workflowMode === 'manual' && (
+        <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="delete-book-title">
+          <div className="w-full max-w-md rounded-3xl p-6 soft-raised space-y-4 bg-[#F5EFE3]">
+            <h2 id="delete-book-title" className="font-editorial text-xl font-bold text-[#1C2010]">Make room for a new project?</h2>
+            <p className="text-sm text-[#555045]">Would you like to remove this book from your bookshelf? This does not delete the Word document downloaded to your device.</p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button onClick={() => setDeletePromptOpen(false)} className="px-4 py-2 rounded-full text-sm font-semibold soft-btn-pill">Keep on Bookshelf</button>
+              <button onClick={async () => {
+                setDeletePromptOpen(false);
+                try {
+                  const saved = await getAllProjectsFromStorage();
+                  const match = saved.find(project => project.title === bookTitle && project.author === authorName);
+                  if (match?.id) {
+                    await deleteProjectFromStorage(match.id);
+                    setShelfProjects(prev => prev.filter(project => project.id !== match.id));
+                    setStorageNotice('Book removed from the saved bookshelf. Your downloaded Word file is unchanged.');
+                  } else {
+                    setStorageNotice('No saved bookshelf record matched this draft, so nothing was deleted. The downloaded Word file is unchanged.');
+                  }
+                } catch {
+                  setStorageNotice('Bookshelf storage could not be accessed. No book was deleted. Your downloaded Word file is unchanged.');
+                }
+                setIsShelfOpen(true);
+              }} className="px-4 py-2 rounded-full text-sm font-bold bg-red-700 text-white">Delete from Bookshelf</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* METHODOLOGY SCORING MODAL */}
@@ -1421,17 +1630,20 @@ export default function PublishStudioApp() {
                 <X className="w-4 h-4 cursor-pointer" />
               </button>
             </div>
+            {storageNotice && <p role="status" className="p-3 rounded-xl bg-white text-xs text-[#555045]">{storageNotice}</p>}
             <div className="p-3 rounded-2xl soft-inset flex justify-between items-center bg-amber-500/5 border border-amber-500/20">
               <div>
                 <h4 className="font-bold text-xs text-[#1C2010]">{bookTitle}</h4>
-                <p className="text-[10px] text-amber-800">
-                  {authorName} • {trimSize} • {pageExtent} Pgs
-                </p>
+                <p className="text-[10px] text-amber-800">{authorName} • {trimSize} • {pageExtent} Pgs</p>
               </div>
-              <span className="text-[10px] font-bold px-2 py-1 rounded bg-amber-500/20 text-amber-900">
-                Active Draft
-              </span>
+              <span className="text-[10px] font-bold px-2 py-1 rounded bg-amber-500/20 text-amber-900">Active Draft</span>
             </div>
+            {shelfProjects.length > 0 ? shelfProjects.map(project => (
+              <div key={project.id} className="p-3 rounded-2xl bg-white border border-black/5 flex items-center justify-between gap-3">
+                <div className="min-w-0"><p className="text-xs font-bold truncate text-[#1C2010]">{project.title || 'Untitled project'}</p><p className="text-[10px] text-[#777064]">{project.author || 'Unknown author'}</p></div>
+                <button type="button" onClick={async () => { if (window.confirm(`Remove “${project.title || 'Untitled project'}” from your bookshelf?`)) { await deleteProjectFromStorage(project.id); setShelfProjects(prev => prev.filter(item => item.id !== project.id)); } }} className="text-xs font-bold text-red-700">Remove</button>
+              </div>
+            )) : <p className="text-xs text-[#777064]">No saved bookshelf projects yet. This panel does not automatically save every draft.</p>}
           </div>
         </div>
       )}
